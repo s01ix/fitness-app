@@ -1,0 +1,16 @@
+DROP TABLE complaint;
+DROP TABLE message;
+DROP TABLE plan_item;
+DROP TABLE training_plan;
+DROP TABLE exercise_dict;
+DROP TABLE reservation;
+DROP TABLE group_class;
+DROP TABLE payment;
+DROP TABLE gym_pass;
+DROP TABLE campaign_pass;
+DROP TABLE pass_type;
+DROP TABLE discount;
+DROP TABLE promo_campaign;
+DROP TABLE equipment;
+DROP TABLE club;
+DROP TABLE gym_user;
