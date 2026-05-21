@@ -2,6 +2,8 @@ module com.example.fitnessapp {
     requires javafx.controls;
     requires javafx.fxml;
     requires javafx.web;
+    requires javafx.graphics; // Dodano, aby rozwiązać problem z Stage
+    requires javafx.base;     // Dodano, aby zapewnić dostęp do właściwości JavaFX
 
     requires org.controlsfx.controls;
     requires com.dlsc.formsfx;

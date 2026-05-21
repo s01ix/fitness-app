@@ -27,7 +27,7 @@ public class PlanItem {
 
     public int getPlanId() { return planId.get(); }
     public IntegerProperty planIdProperty() { return planId; }
-    public void setPlanId(int planId) { this.planId.set(id); }
+    public void setPlanId(int planId) { this.planId.set(planId); }
 
     public int getExerciseId() { return exerciseId.get(); }
     public IntegerProperty exerciseIdProperty() { return exerciseId; }
