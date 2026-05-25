@@ -16,16 +16,19 @@ public class FitnessServer {
     // Wszystkie obiekty dostępu do danych (DAO)
     private static final GymUserDAO userDao = new GymUserDaoJdbc();
     private static final EquipmentDAO equipmentDao = new EquipmentDaoJdbc();
+    private static final com.example.fitnessapp.dao.ClubDAO clubDao = new com.example.fitnessapp.dao.ClubDaoJdbc();
     private static final TrainingPlanDAO trainingPlanDao = new TrainingPlanDaoJdbc();
     private static final ExerciseDictDAO exerciseDictDao = new ExerciseDictDaoJdbc();
+    private static final EquipmentCommandHandler equipmentHandler = new EquipmentCommandHandler(equipmentDao);
+    private static final ClubCommandHandler clubHandler = new ClubCommandHandler(clubDao);
 
     public static void main(String[] args) {
         //DatabaseInitializer.init();
         System.out.println("Baza danych zainicjalizowana.");
-        
+
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
             System.out.println("Serwer Fitness wystartował na porcie: " + PORT);
-            
+
             while (true) {
                 Socket clientSocket = serverSocket.accept();
                 System.out.println("Nowy klient podłączony: " + clientSocket.getInetAddress());
@@ -52,7 +55,7 @@ public class FitnessServer {
                     if (u.isPresent() && u.get().getPasswordHash().equals(tokens[2])) {
                         out.println("LOGIN_OK;" + u.get().getFirstName() + ";" + u.get().getRole() + ";" + u.get().getId());
                     } else {
-                        out.println("LOGIN_ERROR;Nieprawidłowy email lub hasło");
+                        out.println("LOGIN_ERROR;Nieprawidlowy email lub haslo");
                     }
                 }
                 else if ("REGISTER".equals(command)) {
@@ -64,14 +67,11 @@ public class FitnessServer {
                         out.println("REGISTER_ERROR;Błąd tworzenia konta: " + e.getMessage());
                     }
                 }
-                else if ("GET_EQUIPMENT".equals(command)) {
-                    List<Equipment> list = equipmentDao.findAll();
-                    StringBuilder sb = new StringBuilder("EQUIPMENT_OK");
-                    for (Equipment e : list) {
-                        // Format: EQUIPMENT_OK;id,nazwa,status;id2,nazwa2,status2
-                        sb.append(";").append(e.getId()).append(",").append(e.getName()).append(",").append(e.getStatus());
-                    }
-                    out.println(sb.toString());
+                else if (equipmentHandler.handle(command, tokens, out)) {
+                    // handled by equipment handler
+                }
+                else if (clubHandler.handle(command, tokens, out)) {
+                    // handled by club handler
                 }
                 else if ("GET_EXERCISES".equals(command)) {
                     List<ExerciseDict> list = exerciseDictDao.findAll();

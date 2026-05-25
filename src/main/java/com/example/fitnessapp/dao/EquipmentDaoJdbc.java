@@ -64,12 +64,12 @@ public class EquipmentDaoJdbc implements EquipmentDAO {
         String sql = "INSERT INTO equipment (club_id, name, status, last_inspection_date) VALUES (?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql, new String[]{"ID"})) {
+             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)){
 
             ps.setInt(1, e.getClubId());
             ps.setString(2, e.getName());
             ps.setString(3, e.getStatus());
-            ps.setDate(4, Date.valueOf(e.getLastInspectionDate()));
+            ps.setObject(4, Date.valueOf(e.getLastInspectionDate()));
 
             ps.executeUpdate();
 

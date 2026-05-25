@@ -48,13 +48,42 @@ public class FitnessApp extends Application {
         Button regBtn = new Button("Zarejestruj");
         regBox.getChildren().addAll(new Label("Rejestracja nowego konta:"), regPesel, regFn, regLn, regEmail, regPass, regRole, regBtn);
 
+        // --- 2.5. Moduł Klubów ---
+        VBox clubBox = new VBox(5);
+        clubBox.setStyle("-fx-border-color: orange; -fx-padding: 10;");
+        Button getClubsBtn = new Button("Pokaż kluby");
+        TextArea clubDisplay = new TextArea();
+        clubDisplay.setPrefHeight(100);
+
+        TextField clubName = new TextField(); clubName.setPromptText("Nazwa klubu");
+        TextField clubAddress = new TextField(); clubAddress.setPromptText("Adres");
+        TextField clubHours = new TextField(); clubHours.setPromptText("Godziny otwarcia");
+        Button addClubBtn = new Button("Dodaj klub");
+
+        clubBox.getChildren().addAll(new Label("Moduł Klubów:"), getClubsBtn, clubDisplay, new Label("Dodaj nowy klub:"), clubName, clubAddress, clubHours, addClubBtn);
+
         // --- 3. Moduł Sprzętu ---
         VBox dataBox = new VBox(5);
         dataBox.setStyle("-fx-border-color: blue; -fx-padding: 10;");
         Button getEqBtn = new Button("Pokaż sprzęt");
         TextArea eqDisplay = new TextArea();
         eqDisplay.setPrefHeight(100);
-        dataBox.getChildren().addAll(new Label("Moduł Sprzętu:"), getEqBtn, eqDisplay);
+
+        TextField eqClubId = new TextField(); eqClubId.setPromptText("ID Klubu");
+        TextField eqName = new TextField(); eqName.setPromptText("Nazwa sprzętu");
+
+        ComboBox<String> eqStatus = new ComboBox<>();
+        eqStatus.getItems().addAll("OPERATIONAL", "MAINTENANCE", "BROKEN");
+        eqStatus.setPromptText("Status");
+        eqStatus.setValue("OPERATIONAL");
+        
+        DatePicker eqDate = new DatePicker();
+        eqDate.setPromptText("Data inspekcji");
+        eqDate.setValue(java.time.LocalDate.now());
+        
+        Button addEqBtn = new Button("Dodaj sprzęt");
+
+        dataBox.getChildren().addAll(new Label("Moduł Sprzętu:"), getEqBtn, eqDisplay, new Label("Dodaj nowy sprzęt:"), eqClubId, eqName, eqStatus, eqDate, addEqBtn);
 
         // --- 4. Moduł Treningowy ---
         VBox trainingBox = new VBox(5);
@@ -94,6 +123,45 @@ public class FitnessApp extends Application {
             alert.showAndWait();
         });
 
+        getClubsBtn.setOnAction(e -> {
+            String resp = networkClient.sendRequest("GET_CLUBS");
+            System.out.println("Serwer zwrócił (Kluby): " + resp);
+            clubDisplay.clear();
+
+            if (resp != null && resp.startsWith("CLUBS_OK")) {
+                String[] tokens = resp.split(";");
+                if (tokens.length <= 1) {
+                    clubDisplay.setText("Baza klubów jest pusta.");
+                } else {
+                    for (int i = 1; i < tokens.length; i++) {
+                        String[] data = tokens[i].split(",");
+                        if (data.length >= 3) {
+                            clubDisplay.appendText("ID: " + data[0] + " | Nazwa: " + data[1] + " | Adres: " + data[2] + (data.length > 3 ? " | Godziny: " + data[3] : "") + "\n");
+                        } else {
+                            clubDisplay.appendText("Dane: " + tokens[i] + "\n");
+                        }
+                    }
+                }
+            } else {
+                clubDisplay.setText("Błąd serwera: " + resp);
+            }
+        });
+
+        addClubBtn.setOnAction(e -> {
+            String req = String.format("ADD_CLUB;%s;%s;%s",
+                clubName.getText(), clubAddress.getText(), clubHours.getText());
+            String resp = networkClient.sendRequest(req);
+            System.out.println("Odpowiedź dodawania klubu: " + (resp == null ? "poprawnie dodano" : resp));
+
+            Alert alert = new Alert(resp != null && resp.startsWith("ADD_CLUB_OK") ? Alert.AlertType.INFORMATION : Alert.AlertType.ERROR);
+            alert.setContentText(resp != null && resp.contains(";") ? resp.split(";")[1] : (resp == null ? "Błąd" : resp));
+            alert.showAndWait();
+
+            if (resp != null && resp.startsWith("ADD_CLUB_OK")) {
+                getClubsBtn.fire();
+            }
+        });
+
         getEqBtn.setOnAction(e -> {
             String resp = networkClient.sendRequest("GET_EQUIPMENT");
             System.out.println("Serwer zwrócił (Sprzęt): " + resp);
@@ -115,6 +183,18 @@ public class FitnessApp extends Application {
                 }
             } else {
                 eqDisplay.setText("Błąd serwera: " + resp);
+            }
+        });
+
+        addEqBtn.setOnAction(e -> {
+            String dateStr = eqDate.getValue() != null ? eqDate.getValue().toString() : "";
+            String req = String.format("ADD_EQUIPMENT;%s;%s;%s;%s", 
+                eqClubId.getText(), eqName.getText(), eqStatus.getValue(), dateStr);
+            String resp = networkClient.sendRequest(req);
+            System.out.println("Odpowiedź dodawania sprzętu: " + (resp == null ? "poprawnie dodano" : resp));
+
+            if (resp != null && resp.startsWith("ADD_EQUIPMENT_OK")) {
+                getEqBtn.fire();
             }
         });
 
@@ -171,7 +251,7 @@ public class FitnessApp extends Application {
             }
         });
 
-        VBox root = new VBox(15, loginGrid, regBox, dataBox, trainingBox);
+        VBox root = new VBox(15, loginGrid, regBox, clubBox, dataBox, trainingBox);
         ScrollPane scroll = new ScrollPane(root);
         scroll.setFitToWidth(true);
         
