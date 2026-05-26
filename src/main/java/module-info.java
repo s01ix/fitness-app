@@ -2,9 +2,8 @@ module com.example.fitnessapp {
     requires javafx.controls;
     requires javafx.fxml;
     requires javafx.web;
-    requires javafx.graphics; // Dodano, aby rozwiązać problem z Stage
-    requires javafx.base;     // Dodano, aby zapewnić dostęp do właściwości JavaFX
-
+    requires javafx.graphics;
+    requires javafx.base;
     requires org.controlsfx.controls;
     requires com.dlsc.formsfx;
     requires net.synedra.validatorfx;
@@ -15,4 +14,6 @@ module com.example.fitnessapp {
 
     opens com.example.fitnessapp to javafx.fxml;
     exports com.example.fitnessapp;
+    exports com.example.fitnessapp.view;
+    opens com.example.fitnessapp.view to javafx.fxml;
 }
