@@ -10,4 +10,5 @@ public interface GymPassDAO {
     void save(GymPass gymPass);
     void update(GymPass gymPass);
     void delete(int id);
+    List<GymPass> findActiveByUserId(int userId);
 }
