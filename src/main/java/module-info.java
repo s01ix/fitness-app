@@ -15,5 +15,7 @@ module com.example.fitnessapp {
     opens com.example.fitnessapp to javafx.fxml;
     exports com.example.fitnessapp;
     exports com.example.fitnessapp.view;
+    exports com.example.fitnessapp.model;
+    opens com.example.fitnessapp.model to javafx.base;
     opens com.example.fitnessapp.view to javafx.fxml;
 }

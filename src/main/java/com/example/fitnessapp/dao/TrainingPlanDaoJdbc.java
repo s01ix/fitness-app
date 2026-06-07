@@ -6,6 +6,7 @@ import com.example.fitnessapp.dto.TrainingPlanDTO;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class TrainingPlanDaoJdbc implements TrainingPlanDAO {
     @Override
@@ -74,5 +75,43 @@ public class TrainingPlanDaoJdbc implements TrainingPlanDAO {
             throw new RuntimeException(e);
         }
         return detailsList;
+    }
+    @Override
+    public Optional<TrainingPlan> findById(int id) {
+        String sql = "SELECT * FROM training_plan WHERE id = ?";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(new TrainingPlan(
+                            rs.getInt("id"),
+                            rs.getInt("client_id"),
+                            rs.getInt("trainer_id"),
+                            rs.getString("name"),
+                            rs.getDate("created_at").toLocalDate()
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return Optional.empty();
+    }
+
+    @Override
+    public void update(TrainingPlan plan) {
+        String sql = "UPDATE training_plan SET name = ? WHERE id = ?";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, plan.getGoal());
+            ps.setInt(2, plan.getId());
+            ps.executeUpdate();
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

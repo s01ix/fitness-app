@@ -16,11 +16,15 @@ public class FitnessServer {
     // Wszystkie obiekty dostępu do danych (DAO)
     private static final GymUserDAO userDao = new GymUserDaoJdbc();
     private static final EquipmentDAO equipmentDao = new EquipmentDaoJdbc();
-    private static final com.example.fitnessapp.dao.ClubDAO clubDao = new com.example.fitnessapp.dao.ClubDaoJdbc();
+    private static final ClubDAO clubDao = new ClubDaoJdbc();
     private static final TrainingPlanDAO trainingPlanDao = new TrainingPlanDaoJdbc();
     private static final ExerciseDictDAO exerciseDictDao = new ExerciseDictDaoJdbc();
+    private static final PlanItemDAO planItemDao = new PlanItemDaoJdbc();
+
     private static final EquipmentCommandHandler equipmentHandler = new EquipmentCommandHandler(equipmentDao);
     private static final ClubCommandHandler clubHandler = new ClubCommandHandler(clubDao);
+    private static final TrainerCommandHandler trainerHandler = new TrainerCommandHandler(
+            exerciseDictDao, trainingPlanDao, planItemDao, userDao);
 
     public static void main(String[] args) {
         //DatabaseInitializer.init();
@@ -73,12 +77,18 @@ public class FitnessServer {
                 else if (clubHandler.handle(command, tokens, out)) {
                     // handled by club handler
                 }
+                else if (trainerHandler.handle(command, tokens, out)) {
+                    // handled by trainer handler
+                }
                 else if ("GET_EXERCISES".equals(command)) {
                     List<ExerciseDict> list = exerciseDictDao.findAll();
                     StringBuilder sb = new StringBuilder("EXERCISES_OK");
                     for (ExerciseDict e : list) {
-                        // Format: EXERCISES_OK;id,nazwa;id2,nazwa2
-                        sb.append(";").append(e.getId()).append(",").append(e.getName());
+                        // Format: EXERCISES_OK;id,nazwa,grupaMięśniowa,opis
+                        sb.append(";").append(e.getId()).append(",")
+                                .append(e.getName()).append(",")
+                                .append(e.getMuscleGroup() != null ? e.getMuscleGroup() : "").append(",")
+                                .append(e.getDescription() != null ? e.getDescription() : "");
                     }
                     out.println(sb.toString());
                 }

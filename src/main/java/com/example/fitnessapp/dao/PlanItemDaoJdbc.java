@@ -18,7 +18,7 @@ public class PlanItemDaoJdbc implements PlanItemDAO {
                 while (rs.next()) {
                     items.add(new PlanItem(
                             rs.getInt("id"), rs.getInt("plan_id"), rs.getInt("exercise_id"),
-                            rs.getInt("sets"), rs.getInt("reps"), "N/A"
+                            rs.getInt("sets"), rs.getInt("reps")
                     ));
                 }
             }
@@ -37,5 +37,18 @@ public class PlanItemDaoJdbc implements PlanItemDAO {
             ps.setInt(4, i.getReps());
             ps.executeUpdate();
         } catch (SQLException e) { throw new RuntimeException(e); }
+    }
+    @Override
+    public void deleteByPlanId(int planId) {
+        String sql = "DELETE FROM plan_item WHERE plan_id = ?";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, planId);
+            ps.executeUpdate();
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

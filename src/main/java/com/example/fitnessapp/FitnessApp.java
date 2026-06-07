@@ -49,8 +49,9 @@ public class FitnessApp extends Application {
         TextField regLn = new TextField(); regLn.setPromptText("Nazwisko");
         TextField regEmail = new TextField(); regEmail.setPromptText("Email");
         PasswordField regPass = new PasswordField(); regPass.setPromptText("Hasło");
+        TextField regRole = new TextField(); regRole.setPromptText("Rola");
         Button regBtn = new Button("Zarejestruj");
-        regBox.getChildren().addAll(new Label("Rejestracja nowego konta:"), regPesel, regFn, regLn, regEmail, regPass, regBtn);
+        regBox.getChildren().addAll(new Label("Rejestracja nowego konta:"), regPesel, regFn, regLn, regEmail, regPass, regBtn, regRole);
 
         // ==========================================
         // OBSŁUGA ZDARZEŃ (KLIKNIĘCIA)
@@ -74,7 +75,7 @@ public class FitnessApp extends Application {
 
         regBtn.setOnAction(e -> {
             String req = String.format("REGISTER;%s;%s;%s;%s;%s;%s",
-                regPesel.getText(), regFn.getText(), regLn.getText(), regEmail.getText(), regPass.getText(), "CLIENT");
+                regPesel.getText(), regFn.getText(), regLn.getText(), regEmail.getText(), regPass.getText(), regRole.getText());
             String resp = networkClient.sendRequest(req);
             System.out.println("Odpowiedź rejestracji: " + resp);
 

@@ -6,4 +6,5 @@ import java.util.List;
 public interface PlanItemDAO {
     List<PlanItem> findByPlanId(int planId);
     void save(PlanItem item);
+    void deleteByPlanId(int id);
 }

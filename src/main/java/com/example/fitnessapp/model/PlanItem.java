@@ -8,17 +8,15 @@ public class PlanItem {
     private final IntegerProperty exerciseId = new SimpleIntegerProperty();
     private final IntegerProperty sets = new SimpleIntegerProperty();
     private final IntegerProperty reps = new SimpleIntegerProperty();
-    private final StringProperty dayOfWeek = new SimpleStringProperty();
 
     public PlanItem() {}
 
-    public PlanItem(int id, int planId, int exerciseId, int sets, int reps, String dayOfWeek) {
+    public PlanItem(int id, int planId, int exerciseId, int sets, int reps) {
         this.id.set(id);
         this.planId.set(planId);
         this.exerciseId.set(exerciseId);
         this.sets.set(sets);
         this.reps.set(reps);
-        this.dayOfWeek.set(dayOfWeek);
     }
 
     public int getId() { return id.get(); }
@@ -41,7 +39,4 @@ public class PlanItem {
     public IntegerProperty repsProperty() { return reps; }
     public void setReps(int reps) { this.reps.set(reps); }
 
-    public String getDayOfWeek() { return dayOfWeek.get(); }
-    public StringProperty dayOfWeekProperty() { return dayOfWeek; }
-    public void setDayOfWeek(String dayOfWeek) { this.dayOfWeek.set(dayOfWeek); }
 }
