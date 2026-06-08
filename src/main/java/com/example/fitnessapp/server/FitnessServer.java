@@ -20,12 +20,16 @@ public class FitnessServer {
     private static final TrainingPlanDAO trainingPlanDao = new TrainingPlanDaoJdbc();
     private static final ExerciseDictDAO exerciseDictDao = new ExerciseDictDaoJdbc();
     private static final PlanItemDAO planItemDao = new PlanItemDaoJdbc();
+    private static final PassTypeDAO passTypeDao = new PassTypeDaoJdbc();
+    private static final GymPassDAO gymPassDao = new GymPassDaoJdbc();
+    private static final PaymentDAO paymentDao = new PaymentDaoJdbc();
+    private static final GroupClassDAO groupClassDao = new GroupClassDaoJdbc();
+    private static final ReservationDAO reservationDao = new ReservationDAOJdbc();
 
     private static final EquipmentCommandHandler equipmentHandler = new EquipmentCommandHandler(equipmentDao);
     private static final ClubCommandHandler clubHandler = new ClubCommandHandler(clubDao);
-    private static final TrainerCommandHandler trainerHandler = new TrainerCommandHandler(
-            exerciseDictDao, trainingPlanDao, planItemDao, userDao);
-
+    private static final TrainerCommandHandler trainerHandler = new TrainerCommandHandler(exerciseDictDao, trainingPlanDao, planItemDao, userDao);
+    private static final ReceptionistCommandHandler receptionistHandler = new ReceptionistCommandHandler(passTypeDao, gymPassDao, paymentDao, groupClassDao, reservationDao, userDao);
     public static void main(String[] args) {
         //DatabaseInitializer.init();
         System.out.println("Baza danych zainicjalizowana.");
@@ -75,11 +79,13 @@ public class FitnessServer {
                     // handled by equipment handler
                 }
                 else if (clubHandler.handle(command, tokens, out)) {
-                    // handled by club handler
                 }
                 else if (trainerHandler.handle(command, tokens, out)) {
-                    // handled by trainer handler
                 }
+                else if(receptionistHandler.handle(command, tokens, out)){
+
+                }
+
                 else if ("GET_EXERCISES".equals(command)) {
                     List<ExerciseDict> list = exerciseDictDao.findAll();
                     StringBuilder sb = new StringBuilder("EXERCISES_OK");

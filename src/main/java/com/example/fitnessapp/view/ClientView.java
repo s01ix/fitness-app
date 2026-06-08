@@ -1,12 +1,8 @@
 package com.example.fitnessapp.view;
 
 import com.example.fitnessapp.NetworkClient;
-import com.example.fitnessapp.dao.GymPassDaoJdbc;
-import com.example.fitnessapp.dao.PassTypeDaoJdbc;
-import com.example.fitnessapp.dao.TrainingPlanDaoJdbc;
-import com.example.fitnessapp.model.GymPass;
-import com.example.fitnessapp.model.PassType;
-import com.example.fitnessapp.dto.TrainingPlanDTO;
+import com.example.fitnessapp.dao.*;
+import com.example.fitnessapp.model.*;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -14,6 +10,7 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.util.StringConverter;
 
@@ -24,6 +21,8 @@ public class ClientView extends VBox {
     private final PassTypeDaoJdbc passTypeDaoJdbc = new PassTypeDaoJdbc();
     private final GymPassDaoJdbc gymPassDaoJdbc = new GymPassDaoJdbc();
     private final TrainingPlanDaoJdbc trainingPlanDaoJdbc = new TrainingPlanDaoJdbc();
+    private final PlanItemDaoJdbc planItemDaoJdbc = new PlanItemDaoJdbc();
+    private final ExerciseDictDaoJdbc exerciseDictDaoJdbc = new ExerciseDictDaoJdbc();
     private final int currentUserId;
 
     private final VBox activePassesContainer = new VBox(12);
@@ -222,41 +221,56 @@ public class ClientView extends VBox {
             activePassesContainer.getChildren().add(passLabel);
         }
     }
-
     private void refreshTrainingPlan() {
         trainingPlanContainer.getChildren().clear();
 
-        List<TrainingPlanDTO> planItems = trainingPlanDaoJdbc.getClientTrainingPlan(currentUserId);
+        List<TrainingPlan> plans = trainingPlanDaoJdbc.findByUserId(currentUserId);
 
-        if (planItems.isEmpty()) {
+        if (plans.isEmpty()) {
             Label noPlanLabel = new Label("Trener nie udostępnił Ci jeszcze żadnego planu.");
             noPlanLabel.setStyle("-fx-text-fill: #718096; -fx-font-style: italic; -fx-font-size: 13px;");
             trainingPlanContainer.getChildren().add(noPlanLabel);
             return;
         }
 
-        Label planNameLabel = new Label("Plan: " + planItems.get(0).getPlanName());
-        planNameLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #3182ce; -fx-font-size: 14px; -fx-padding: 0 0 5 0;");
-        trainingPlanContainer.getChildren().add(planNameLabel);
+        for (TrainingPlan plan : plans) {
+            Label planNameLabel = new Label("Plan: " + plan.getGoal());
+            planNameLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #3182ce; -fx-font-size: 14px; -fx-padding: 0 0 5 0;");
+            trainingPlanContainer.getChildren().add(planNameLabel);
 
-        VBox exercisesBox = new VBox(10);
-        exercisesBox.setStyle("-fx-background-color: #ffffff; -fx-padding: 18px; -fx-background-radius: 10px; " +
-                "-fx-border-color: #e2e8f0; -fx-border-width: 1px; -fx-border-radius: 10px;");
-        exercisesBox.setPrefWidth(450);
+            VBox exercisesBox = new VBox(10);
+            exercisesBox.setStyle("-fx-background-color: #ffffff; -fx-padding: 18px; -fx-background-radius: 10px; " +
+                    "-fx-border-color: #e2e8f0; -fx-border-width: 1px; -fx-border-radius: 10px;");
+            exercisesBox.setPrefWidth(450);
 
-        for (TrainingPlanDTO item : planItems) {
-            String exerciseText = String.format("• %s  —  %dx%d  (Ciężar: %s kg, Przerwa: %ds)",
-                    item.getExerciseName(),
-                    item.getSets(),
-                    item.getReps(),
-                    item.getWeight() != null ? item.getWeight().toString() : "0",
-                    item.getRestSeconds()
-            );
-            Label exLabel = new Label(exerciseText);
-            exLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #2d3748;");
-            exercisesBox.getChildren().add(exLabel);
+            List<PlanItem> items = planItemDaoJdbc.findByPlanId(plan.getId());
+
+            if (items.isEmpty()) {
+                Label emptyPlanLabel = new Label("Plan jest pusty (brak przypisanych ćwiczeń).");
+                emptyPlanLabel.setStyle("-fx-text-fill: #a0aec0; -fx-font-style: italic; -fx-font-size: 12px;");
+                exercisesBox.getChildren().add(emptyPlanLabel);
+            } else {
+                for (PlanItem item : items) {
+                    String exerciseName = exerciseDictDaoJdbc.findById(item.getExerciseId())
+                            .map(ExerciseDict::getName)
+                            .orElse("Nieznane ćwiczenie");
+
+                    String exerciseText = String.format("• %s  —  %dx%d",
+                            exerciseName,
+                            item.getSets(),
+                            item.getReps()
+                    );
+                    Label exLabel = new Label(exerciseText);
+                    exLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #2d3748;");
+                    exercisesBox.getChildren().add(exLabel);
+                }
+            }
+
+            trainingPlanContainer.getChildren().add(exercisesBox);
+
+            Region spacer = new Region();
+            spacer.setPrefHeight(10);
+            trainingPlanContainer.getChildren().add(spacer);
         }
-
-        trainingPlanContainer.getChildren().add(exercisesBox);
     }
 }

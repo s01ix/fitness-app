@@ -29,28 +29,28 @@ public class GroupClassDaoJdbc implements GroupClassDAO {
     }
 
     @Override
-    public Optional<GroupClass> findById(int id){
+    public Optional<GroupClass> findById(int id) {
         String sql = "SELECT id, club_id, trainer_id, name, schedule_time, capacity, status FROM group_class WHERE id = ?";
         try (Connection conn = DatabaseConfig.getConnection();
-        PreparedStatement ps = conn.prepareStatement(sql)){
+             PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setInt(1, id);
-            try (ResultSet rs = ps.executeQuery()){
-                if(rs.next()){
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
                     return Optional.of(mapRowToGroupClass(rs));
                 }
             }
-        }catch (SQLException e){
+        } catch (SQLException e) {
             throw new RuntimeException(e);
         }
         return Optional.empty();
     }
 
     @Override
-    public void save(GroupClass gc){
+    public void save(GroupClass gc) {
         String sql = "INSERT INTO group_class (club_id, trainer_id, name, schedule_time, capacity, status) VALUES (?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseConfig.getConnection();
-        PreparedStatement ps = conn.prepareStatement(sql, new String[]{"ID"})){
+             PreparedStatement ps = conn.prepareStatement(sql, new String[]{"ID"})) {
 
             ps.setInt(1, gc.getClubId());
             ps.setInt(2, gc.getTrainerId());
@@ -61,21 +61,21 @@ public class GroupClassDaoJdbc implements GroupClassDAO {
 
             ps.executeUpdate();
 
-            try (ResultSet keys = ps.getGeneratedKeys()){
-                if( keys.next()){
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (keys.next()) {
                     gc.setId(keys.getInt(1));
                 }
             }
-        }catch (SQLException e){
+        } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
 
     @Override
-    public void update(GroupClass gc){
+    public void update(GroupClass gc) {
         String sql = "UPDATE group_class SET club_id = ?, trainer_id = ?, name = ?, schedule_time = ?, capacity = ?, status = ? WHERE id = ?";
         try (Connection conn = DatabaseConfig.getConnection();
-        PreparedStatement ps = conn.prepareStatement(sql)){
+             PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setInt(1, gc.getClubId());
             ps.setInt(2, gc.getTrainerId());
@@ -83,24 +83,26 @@ public class GroupClassDaoJdbc implements GroupClassDAO {
             ps.setTimestamp(4, Timestamp.valueOf(gc.getScheduleTime()));
             ps.setInt(5, gc.getCapacity());
             ps.setString(6, gc.getStatus());
-        }catch (SQLException e){
+            ps.setInt(7, gc.getId());
+            ps.executeUpdate();
+        } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
 
     @Override
-    public void delete(int id){
+    public void delete(int id) {
         String sql = "DELETE FROM group_class WHERE id = ?";
         try (Connection conn = DatabaseConfig.getConnection();
-        PreparedStatement ps = conn.prepareStatement(sql)){
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
             ps.executeUpdate();
-        }catch (SQLException e){
+        } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
 
-    private GroupClass mapRowToGroupClass(ResultSet rs) throws SQLException{
+    private GroupClass mapRowToGroupClass(ResultSet rs) throws SQLException {
         return new GroupClass(
                 rs.getInt("id"),
                 rs.getInt("club_id"),

@@ -1,6 +1,8 @@
 package com.example.fitnessapp.dao;
 
 import com.example.fitnessapp.model.GymPass;
+
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -11,4 +13,5 @@ public interface GymPassDAO {
     void update(GymPass gymPass);
     void delete(int id);
     List<GymPass> findActiveByUserId(int userId);
+    boolean purchasePass(int userId, int passTypeId, BigDecimal price, String paymentMethod);
 }
