@@ -1,6 +1,7 @@
 package com.example.fitnessapp.dao;
 
 import com.example.fitnessapp.database.DatabaseConfig;
+import com.example.fitnessapp.dto.GroupClassDTO;
 import com.example.fitnessapp.model.GroupClass;
 
 import java.sql.*;
@@ -9,6 +10,35 @@ import java.util.List;
 import java.util.Optional;
 
 public class GroupClassDaoJdbc implements GroupClassDAO {
+
+    public List<GroupClassDTO> getAvailableClassesWithDetails(){
+        String sql = "SELECT gc.id, gc.name, gc.schedule_time, gc.capacity, u.first_name, u.last_name " +
+                "FROM group_class gc " +
+                "JOIN gym_user u ON gc.trainer_id = u.id " +
+                "WHERE gc.status = 'SCHEDULED' AND gc.schedule_time > CURRENT_TIMESTAMP " +
+                "ORDER BY gc.schedule_time ASC";
+
+        List<GroupClassDTO> list = new ArrayList<>();
+
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                String trainerName = rs.getString("first_name") + " " + rs.getString("last_name");
+                list.add(new GroupClassDTO(
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getTimestamp("schedule_time").toLocalDateTime(),
+                        trainerName,
+                        rs.getInt("capacity")
+                ));
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return list;
+    }
 
     @Override
     public List<GroupClass> findAll() {

@@ -2,12 +2,54 @@ package com.example.fitnessapp.dao;
 
 import com.example.fitnessapp.database.DatabaseConfig;
 import com.example.fitnessapp.model.Reservation;
+import com.example.fitnessapp.dto.ReservationDTO;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 public class ReservationDAOJdbc implements ReservationDAO {
+
+    public List<ReservationDTO> getClientReservationHistory(int clientId) {
+        String sql = "SELECT r.id, r.reservation_date, r.status, gc.name AS class_name, " +
+                "u.first_name, u.last_name " +
+                "FROM reservation r " +
+                "LEFT JOIN group_class gc ON r.class_id = gc.id " +
+                "LEFT JOIN gym_user u ON r.trainer_id = u.id " +
+                "WHERE r.client_id = ? " +
+                "ORDER BY r.reservation_date DESC";
+
+        List<ReservationDTO> list = new ArrayList<>();
+
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, clientId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String type = "TRENING PERSONALNY";
+                    String eventName = "Trener: " + rs.getString("first_name") + " " + rs.getString("last_name");
+
+                    if (rs.getString("class_name") != null) {
+                        type = "ZAJĘCIA GRUPOWE";
+                        eventName = rs.getString("class_name");
+                    }
+
+                    list.add(new ReservationDTO(
+                            rs.getInt("id"),
+                            type,
+                            eventName,
+                            rs.getDate("reservation_date").toLocalDate(),
+                            rs.getString("status")
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Błąd pobierania historii frekwencji klienta", e);
+        }
+        return list;
+    }
 
     @Override
     public List<Reservation> findByClientId(int clientId) {

@@ -2,12 +2,32 @@ package com.example.fitnessapp.dao;
 
 import com.example.fitnessapp.database.DatabaseConfig;
 import com.example.fitnessapp.model.GymUser;
+import com.example.fitnessapp.dto.GymUserDTO;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 public class GymUserDaoJdbc implements GymUserDAO {
+
+    @Override
+    public List<GymUserDTO> findAllTrainers() {
+        String sql = "SELECT id, first_name, last_name FROM gym_user WHERE role = 'TRAINER' AND status = 'ACTIVE'";
+        List<GymUserDTO> list = new ArrayList<>();
+
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                String fullName = rs.getString("first_name") + " " + rs.getString("last_name");
+                list.add(new GymUserDTO(rs.getInt("id"), fullName));
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Błąd podczas pobierania listy trenerów", e);
+        }
+        return list;
+    }
 
     @Override
     public List<GymUser> findAll() {
