@@ -43,6 +43,13 @@ public class TrainerView extends VBox {
     private int currentEditingPlanId = -1;
     private Button createNewPlanBtn;
 
+    private ComboBox<String> chatClientCombo;
+    private ListView<String> chatHistoryList;
+    private TextField messageInput;
+    private Button sendMessageBtn;
+    private int currentChatClientId = -1;
+
+
     public TrainerView(NetworkClient networkClient, int currentUserId) {
         this.networkClient = networkClient;
         this.currentUserId = currentUserId;
@@ -52,7 +59,8 @@ public class TrainerView extends VBox {
         tabPane = new TabPane();
         tabPane.getTabs().addAll(
                 createExercisesTab(),
-                createPlansTab()
+                createPlansTab(),
+                createMessagesTab()
         );
 
         this.setPadding(new Insets(10));
@@ -319,6 +327,7 @@ public class TrainerView extends VBox {
             Platform.runLater(() -> {
                 clientsList.clear();
                 clientComboBox.getItems().clear();
+                chatClientCombo.getItems().clear();
 
                 if (resp != null && resp.startsWith("CLIENTS_OK")) {
                     String[] tokens = resp.split(";");
@@ -333,6 +342,7 @@ public class TrainerView extends VBox {
                             GymUser user = new GymUser(id, "", firstName, lastName, email, "", "CLIENT", "ACTIVE");
                             clientsList.add(user);
                             clientComboBox.getItems().add(id + " - " + firstName + " " + lastName + " (" + email + ")");
+                            chatClientCombo.getItems().add(id + " - " + firstName + " " + lastName + " (" + email + ")");
                         }
                     }
                 }
@@ -476,6 +486,106 @@ public class TrainerView extends VBox {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    // ========== ZAKŁADKA: WIADOMOŚCI ==========
+    private Tab createMessagesTab() {
+        Tab tab = new Tab("Wiadomości");
+        tab.setClosable(false);
+
+        VBox content = new VBox(10);
+        content.setPadding(new Insets(10));
+
+        Label selectClientLabel = new Label("Wybierz klienta do rozmowy:");
+        chatClientCombo = new ComboBox<>();
+        chatClientCombo.setPromptText("Wybierz klienta...");
+        chatClientCombo.setPrefWidth(300);
+
+        Button refreshChatBtn = new Button("Odśwież wiadomości");
+        refreshChatBtn.setDisable(true);
+
+        HBox topBox = new HBox(10, chatClientCombo, refreshChatBtn);
+
+        chatHistoryList = new ListView<>();
+        chatHistoryList.setPrefHeight(300);
+        chatHistoryList.setStyle("-fx-font-size: 14px;");
+
+        HBox bottomBox = new HBox(10);
+        messageInput = new TextField();
+        messageInput.setPromptText("Wpisz wiadomość...");
+        messageInput.setPrefWidth(500);
+        messageInput.setDisable(true);
+
+        sendMessageBtn = new Button("Wyślij");
+        sendMessageBtn.setDisable(true);
+
+        bottomBox.getChildren().addAll(messageInput, sendMessageBtn);
+
+        chatClientCombo.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null && !newVal.isEmpty()) {
+                currentChatClientId = Integer.parseInt(newVal.split(" - ")[0]);
+                refreshChatBtn.setDisable(false);
+                messageInput.setDisable(false);
+                sendMessageBtn.setDisable(false);
+                loadChatHistory();
+            }
+        });
+
+        refreshChatBtn.setOnAction(e -> loadChatHistory());
+        sendMessageBtn.setOnAction(e -> handleSendMessage());
+
+        messageInput.setOnAction(e -> handleSendMessage());
+
+        content.getChildren().addAll(selectClientLabel, topBox, new Label("Historia konwersacji:"), chatHistoryList, bottomBox);
+        tab.setContent(content);
+
+        return tab;
+    }
+
+    private void loadChatHistory() {
+        if (currentChatClientId == -1) return;
+
+        new Thread(() -> {
+            String resp = networkClient.sendRequest("GET_CHAT_HISTORY;" + currentUserId + ";" + currentChatClientId);
+            Platform.runLater(() -> {
+                chatHistoryList.getItems().clear();
+                if (resp != null && resp.startsWith("CHAT_HISTORY_OK")) {
+                    String[] tokens = resp.split(";");
+                    for (int i = 1; i < tokens.length; i++) {
+                        String[] parts = tokens[i].split("\\|");
+                        if (parts.length >= 2) {
+                            int senderId = Integer.parseInt(parts[0]);
+                            String text = parts[1];
+
+                            String prefix = (senderId == currentUserId) ? "Ja: " : "Klient: ";
+                            chatHistoryList.getItems().add(prefix + text);
+                        }
+                    }
+                    if (!chatHistoryList.getItems().isEmpty()) {
+                        chatHistoryList.scrollTo(chatHistoryList.getItems().size() - 1);
+                    }
+                }
+            });
+        }).start();
+    }
+
+    private void handleSendMessage() {
+        String text = messageInput.getText().trim();
+        if (text.isEmpty() || currentChatClientId == -1) return;
+
+        new Thread(() -> {
+            String req = String.format("SEND_MESSAGE;%d;%d;%s", currentUserId, currentChatClientId, text);
+            String resp = networkClient.sendRequest(req);
+
+            Platform.runLater(() -> {
+                if (resp != null && resp.startsWith("SEND_MESSAGE_OK")) {
+                    messageInput.clear();
+                    loadChatHistory();
+                } else {
+                    showAlert("Błąd", "Nie udało się wysłać wiadomości", Alert.AlertType.ERROR);
+                }
+            });
+        }).start();
     }
 
     public static class PlanItemDisplay {

@@ -25,10 +25,11 @@ public class FitnessServer {
     private static final PaymentDAO paymentDao = new PaymentDaoJdbc();
     private static final GroupClassDAO groupClassDao = new GroupClassDaoJdbc();
     private static final ReservationDAO reservationDao = new ReservationDAOJdbc();
+    private static final MessageDAO messageDao = new MessageDaoJdbc();
 
     private static final EquipmentCommandHandler equipmentHandler = new EquipmentCommandHandler(equipmentDao);
     private static final ClubCommandHandler clubHandler = new ClubCommandHandler(clubDao);
-    private static final TrainerCommandHandler trainerHandler = new TrainerCommandHandler(exerciseDictDao, trainingPlanDao, planItemDao, userDao);
+    private static final TrainerCommandHandler trainerHandler = new TrainerCommandHandler(exerciseDictDao, trainingPlanDao, planItemDao, userDao, messageDao);
     private static final ReceptionistCommandHandler receptionistHandler = new ReceptionistCommandHandler(passTypeDao, gymPassDao, paymentDao, groupClassDao, reservationDao, userDao);
     public static void main(String[] args) {
         //DatabaseInitializer.init();

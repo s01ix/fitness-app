@@ -13,15 +13,19 @@ public class TrainerCommandHandler {
     private final TrainingPlanDAO trainingPlanDao;
     private final PlanItemDAO planItemDao;
     private final GymUserDAO userDao;
+    private final MessageDAO messageDao;
 
     public TrainerCommandHandler(ExerciseDictDAO exerciseDictDao,
                                  TrainingPlanDAO trainingPlanDao,
                                  PlanItemDAO planItemDao,
-                                 GymUserDAO userDao) {
+                                 GymUserDAO userDao,
+                                 MessageDAO messageDao
+            ) {
         this.exerciseDictDao = exerciseDictDao;
         this.trainingPlanDao = trainingPlanDao;
         this.planItemDao = planItemDao;
         this.userDao = userDao;
+        this.messageDao = messageDao;
     }
 
     public boolean handle(String command, String[] tokens, PrintWriter out) {
@@ -42,6 +46,10 @@ public class TrainerCommandHandler {
                 return handleUpdatePlan(tokens, out);
             case "CLEAR_PLAN_ITEMS":
                 return handleClearPlanItems(tokens, out);
+            case "GET_CHAT_HISTORY":
+                return handleGetChatHistory(tokens, out);
+            case "SEND_MESSAGE":
+                return handleSendMessage(tokens, out);
             default:
                 return false;        }
     }
@@ -208,6 +216,51 @@ public class TrainerCommandHandler {
             return true;
         } catch (Exception e) {
             out.println("CLEAR_PLAN_ITEMS_ERROR;Błąd: " + e.getMessage());
+            return true;
+        }
+    }
+
+    private boolean handleGetChatHistory(String[] tokens, PrintWriter out) {
+        try {
+            int trainerId = Integer.parseInt(tokens[1]);
+            int clientId = Integer.parseInt(tokens[2]);
+
+            List<Message> messages = messageDao.findConversation(trainerId, clientId);
+            StringBuilder sb = new StringBuilder("CHAT_HISTORY_OK");
+
+            for (Message m : messages) {
+                // Formatujemy bezpiecznie treść, by średniki z czatu nie psuły parsowania na kliencie
+                String safeContent = m.getContent().replace(";", ",");
+                sb.append(";").append(m.getSenderId()).append("|")
+                        .append(safeContent).append("|")
+                        .append(m.getSentAt() != null ? m.getSentAt().toString() : "");
+            }
+            out.println(sb.toString());
+            return true;
+        } catch (Exception e) {
+            out.println("CHAT_HISTORY_ERROR;Błąd: " + e.getMessage());
+            return true;
+        }
+    }
+
+    private boolean handleSendMessage(String[] tokens, PrintWriter out) {
+        try {
+            int senderId = Integer.parseInt(tokens[1]);
+            int receiverId = Integer.parseInt(tokens[2]);
+
+            // Sklejamy treść wiadomości, jeśli klient użył średników (rozbite przez split na serwerze)
+            StringBuilder contentBuilder = new StringBuilder();
+            for (int i = 3; i < tokens.length; i++) {
+                contentBuilder.append(tokens[i]).append(i == tokens.length - 1 ? "" : ";");
+            }
+
+            Message msg = new Message(0, senderId, receiverId, contentBuilder.toString(), null);
+            messageDao.save(msg);
+
+            out.println("SEND_MESSAGE_OK");
+            return true;
+        } catch (Exception e) {
+            out.println("SEND_MESSAGE_ERROR;Błąd: " + e.getMessage());
             return true;
         }
     }
