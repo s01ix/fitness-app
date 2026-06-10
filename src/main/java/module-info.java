@@ -18,4 +18,6 @@ module com.example.fitnessapp {
     exports com.example.fitnessapp.model;
     opens com.example.fitnessapp.model to javafx.base;
     opens com.example.fitnessapp.view to javafx.fxml;
+    opens com.example.fitnessapp.dao;
+    opens com.example.fitnessapp.server;
 }
