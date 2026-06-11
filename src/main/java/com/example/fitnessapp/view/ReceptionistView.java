@@ -1,509 +1,303 @@
 package com.example.fitnessapp.view;
 
 import com.example.fitnessapp.NetworkClient;
-import com.example.fitnessapp.model.*;
 import javafx.application.Platform;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-
 public class ReceptionistView extends VBox {
-    private NetworkClient networkClient;
-    private int currentUserId;
+    private final NetworkClient networkClient;
+    private final int currentUserId;
 
-    private TabPane tabPane;
-
-    private TextField searchClientField;
-    private Button searchClientBtn;
-    private Label clientInfoLabel;
     private int selectedClientId = -1;
-
-    private ComboBox<String> passTypeCombo;
-    private List<PassType> passTypesList = new ArrayList<>();
-    private Label priceLabel;
-    private ComboBox<String> paymentMethodCombo;
-    private Button sellPassBtn;
-
+    private Label clientInfoLabel;
+    private TextField searchClientField;
     private TextArea clientPassesArea;
-    private Button refreshPassesBtn;
-
-    private TableView<GroupClassDisplay> classesTable;
-    private ObservableList<GroupClassDisplay> classesList = FXCollections.observableArrayList();
-    private Button refreshClassesBtn;
-
-    private TextField resClientSearchField;
-    private Button resClientSearchBtn;
-    private Label resClientInfoLabel;
-    private int resSelectedClientId = -1;
-
-    private Button createReservationBtn;
-    private TextArea clientReservationsArea;
-    private Button cancelReservationBtn;
-    private TextField cancelResIdField;
 
     public ReceptionistView(NetworkClient networkClient, int currentUserId) {
         this.networkClient = networkClient;
         this.currentUserId = currentUserId;
 
-        Label titleLabel = new Label("Panel Recepcjonisty");
+        Label titleLabel = new Label("PANEL RECEPCJI - SYSTEM OBSŁUGI KLUBU");
+        titleLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
 
-        tabPane = new TabPane();
+        TabPane tabPane = new TabPane();
+        tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
         tabPane.getTabs().addAll(
-                createPassSalesTab(),
-                createReservationsTab()
+                buildCheckInTab(),
+                buildSalesTab(),
+                buildReservationsTab(),
+                buildHelpdeskTab()
         );
 
-        this.setPadding(new Insets(10));
-        this.setSpacing(10);
+        this.setPadding(new Insets(15));
+        this.setSpacing(15);
         this.getChildren().addAll(titleLabel, tabPane);
-
-        loadPassTypes();
     }
 
-    private Tab createPassSalesTab() {
-        Tab tab = new Tab("Sprzedaż karnetów");
-        tab.setClosable(false);
-
-        VBox content = new VBox(10);
-        content.setPadding(new Insets(10));
-
-        Label searchLabel = new Label("1. Wyszukaj klienta:");
-
-        searchClientField = new TextField();
-        searchClientField.setPromptText("Email lub PESEL klienta");
-        searchClientField.setPrefWidth(250);
-
-        searchClientBtn = new Button("Wyszukaj");
-        searchClientBtn.setOnAction(e -> searchClient());
-
-        HBox searchBox = new HBox(10, searchClientField, searchClientBtn);
-
-        clientInfoLabel = new Label("Nie wybrano klienta");
-
-        Label passTypeLabel = new Label("2. Wybierz typ karnetu:");
-
-        passTypeCombo = new ComboBox<>();
-        passTypeCombo.setPromptText("Wybierz karnet");
-        passTypeCombo.setPrefWidth(250);
-        passTypeCombo.setOnAction(e -> updatePrice());
-
-        priceLabel = new Label("Cena: -");
-
-        Label paymentLabel = new Label("3. Metoda płatności:");
-
-        paymentMethodCombo = new ComboBox<>();
-        paymentMethodCombo.getItems().addAll("CASH", "CARD", "TRANSFER", "BLIK");
-        paymentMethodCombo.setValue("CARD");
-        paymentMethodCombo.setPrefWidth(200);
-
-        sellPassBtn = new Button("SPRZEDAJ KARNET");
-        sellPassBtn.setOnAction(e -> handleSellPass());
-
-        Label historyLabel = new Label("Aktywne karnety klienta:");
-
-        clientPassesArea = new TextArea();
-        clientPassesArea.setPrefHeight(150);
-        clientPassesArea.setEditable(false);
-
-        refreshPassesBtn = new Button("Odśwież karnety");
-        refreshPassesBtn.setOnAction(e -> refreshClientPasses());
-
-        content.getChildren().addAll(
-                searchLabel, searchBox, clientInfoLabel,
-                new Separator(),
-                passTypeLabel, passTypeCombo, priceLabel,
-                new Separator(),
-                paymentLabel, paymentMethodCombo,
-                new Separator(),
-                sellPassBtn,
-                new Separator(),
-                historyLabel, clientPassesArea, refreshPassesBtn
-        );
-
-        tab.setContent(content);
-        return tab;
-    }
-
-    private Tab createReservationsTab() {
-        Tab tab = new Tab("Rezerwacje zajęć grupowych");
-        tab.setClosable(false);
-
-        VBox content = new VBox(10);
-        content.setPadding(new Insets(10));
-
-        Label scheduleLabel = new Label("Harmonogram zajęć grupowych:");
-
-        classesTable = new TableView<>();
-        classesTable.setItems(classesList);
-        classesTable.setPrefHeight(250);
-
-        TableColumn<GroupClassDisplay, Integer> idCol = new TableColumn<>("ID");
-        idCol.setCellValueFactory(cellData ->
-                new javafx.beans.property.SimpleIntegerProperty(cellData.getValue().getId()).asObject());
-        idCol.setPrefWidth(50);
-
-        TableColumn<GroupClassDisplay, String> nameCol = new TableColumn<>("Nazwa");
-        nameCol.setCellValueFactory(cellData ->
-                new javafx.beans.property.SimpleStringProperty(cellData.getValue().getName()));
-        nameCol.setPrefWidth(150);
-
-        TableColumn<GroupClassDisplay, String> timeCol = new TableColumn<>("Data i godzina");
-        timeCol.setCellValueFactory(cellData ->
-                new javafx.beans.property.SimpleStringProperty(cellData.getValue().getScheduleTime()));
-        timeCol.setPrefWidth(150);
-
-        TableColumn<GroupClassDisplay, String> capacityCol = new TableColumn<>("Miejsca");
-        capacityCol.setCellValueFactory(cellData ->
-                new javafx.beans.property.SimpleStringProperty(cellData.getValue().getCapacityInfo()));
-        capacityCol.setPrefWidth(100);
-
-        TableColumn<GroupClassDisplay, String> statusCol = new TableColumn<>("Status");
-        statusCol.setCellValueFactory(cellData ->
-                new javafx.beans.property.SimpleStringProperty(cellData.getValue().getStatus()));
-        statusCol.setPrefWidth(100);
-
-        classesTable.getColumns().addAll(idCol, nameCol, timeCol, capacityCol, statusCol);
-
-        refreshClassesBtn = new Button("Odśwież harmonogram");
-        refreshClassesBtn.setOnAction(e -> loadGroupClasses());
-
-        Label createResLabel = new Label("Tworzenie rezerwacji:");
-
-        resClientSearchField = new TextField();
-        resClientSearchField.setPromptText("Email lub PESEL klienta");
-        resClientSearchField.setPrefWidth(250);
-
-        resClientSearchBtn = new Button("Wyszukaj");
-        resClientSearchBtn.setOnAction(e -> searchClientForReservation());
-
-        HBox resSearchBox = new HBox(10, resClientSearchField, resClientSearchBtn);
-
-        resClientInfoLabel = new Label("Nie wybrano klienta");
-
-        createReservationBtn = new Button("Zarezerwuj wybrane zajęcia");
-        createReservationBtn.setOnAction(e -> handleCreateReservation());
-
-        Label cancelLabel = new Label("Anulowanie rezerwacji:");
-
-        cancelResIdField = new TextField();
-        cancelResIdField.setPromptText("ID rezerwacji do anulowania");
-        cancelResIdField.setPrefWidth(200);
-
-        cancelReservationBtn = new Button("Anuluj rezerwację");
-        cancelReservationBtn.setOnAction(e -> handleCancelReservation());
-
-        HBox cancelBox = new HBox(10, cancelResIdField, cancelReservationBtn);
-
-        Label clientResLabel = new Label("Rezerwacje wybranego klienta:");
-
-        clientReservationsArea = new TextArea();
-        clientReservationsArea.setPrefHeight(120);
-        clientReservationsArea.setEditable(false);
-
-        content.getChildren().addAll(
-                scheduleLabel, classesTable, refreshClassesBtn,
-                new Separator(),
-                createResLabel, resSearchBox, resClientInfoLabel, createReservationBtn,
-                new Separator(),
-                cancelLabel, cancelBox,
-                new Separator(),
-                clientResLabel, clientReservationsArea
-        );
-
-        loadGroupClasses();
-
-        tab.setContent(content);
-        return tab;
-    }
-
-    private void loadPassTypes() {
-        new Thread(() -> {
-            String resp = networkClient.sendRequest("GET_PASS_TYPES");
-            Platform.runLater(() -> {
-                passTypesList.clear();
-                passTypeCombo.getItems().clear();
-
-                if (resp != null && resp.startsWith("PASS_TYPES_OK")) {
-                    String[] tokens = resp.split(";");
-                    for (int i = 1; i < tokens.length; i++) {
-                        String[] parts = tokens[i].split(",");
-                        if (parts.length >= 3) {
-                            int id = Integer.parseInt(parts[0]);
-                            String name = parts[1];
-                            BigDecimal price = new BigDecimal(parts[2]);
-
-                            PassType pt = new PassType(id, name, price);
-                            passTypesList.add(pt);
-                            passTypeCombo.getItems().add(id + " - " + name + " (" + price + " zł)");
-                        }
-                    }
-                }
-            });
-        }).start();
-    }
-
-    private void searchClient() {
-        String searchTerm = searchClientField.getText().trim();
-        if (searchTerm.isEmpty()) {
-            showAlert("Błąd", "Podaj email lub PESEL klienta", Alert.AlertType.WARNING);
-            return;
-        }
-
-        new Thread(() -> {
-            String resp = networkClient.sendRequest("SEARCH_CLIENT;" + searchTerm);
-            Platform.runLater(() -> {
-                if (resp != null && resp.startsWith("CLIENT_FOUND")) {
-                    String[] tokens = resp.split(";");
-                    if (tokens.length >= 5) {
-                        selectedClientId = Integer.parseInt(tokens[1]);
-                        String name = tokens[2] + " " + tokens[3];
-                        String email = tokens[4];
-                        clientInfoLabel.setText("✓ Klient: " + name + " (" + email + ")");
-                        refreshClientPasses();
-                    }
-                } else {
-                    selectedClientId = -1;
-                    clientInfoLabel.setText("✗ Nie znaleziono klienta");
-                    clientPassesArea.clear();
-                }
-            });
-        }).start();
-    }
-
-    private void updatePrice() {
-        String selected = passTypeCombo.getValue();
-        if (selected != null && !selected.isEmpty()) {
-            int id = Integer.parseInt(selected.split(" - ")[0]);
-            PassType pt = passTypesList.stream()
-                    .filter(p -> p.getId() == id)
-                    .findFirst()
-                    .orElse(null);
-            if (pt != null) {
-                priceLabel.setText("Cena: " + pt.getBasePrice() + " zł");
-            }
-        }
-    }
-
-    private void handleSellPass() {
-        if (selectedClientId == -1) {
-            showAlert("Błąd", "Wybierz klienta", Alert.AlertType.WARNING);
-            return;
-        }
-
-        String selectedPass = passTypeCombo.getValue();
-        if (selectedPass == null || selectedPass.isEmpty()) {
-            showAlert("Błąd", "Wybierz typ karnetu", Alert.AlertType.WARNING);
-            return;
-        }
-
-        int passTypeId = Integer.parseInt(selectedPass.split(" - ")[0]);
-        String paymentMethod = paymentMethodCombo.getValue();
-
-        new Thread(() -> {
-            String req = String.format("SELL_PASS;%d;%d;%s", selectedClientId, passTypeId, paymentMethod);
-            String resp = networkClient.sendRequest(req);
-
-            Platform.runLater(() -> {
-                if (resp != null && resp.startsWith("SELL_PASS_OK")) {
-                    showAlert("Sukces", "Karnet został sprzedany!", Alert.AlertType.INFORMATION);
-                    refreshClientPasses();
-                } else {
-                    showAlert("Błąd", resp != null ? resp : "Nieznany błąd", Alert.AlertType.ERROR);
-                }
-            });
-        }).start();
-    }
-
-    private void refreshClientPasses() {
-        if (selectedClientId == -1) return;
-
-        new Thread(() -> {
-            String resp = networkClient.sendRequest("GET_CLIENT_PASSES;" + selectedClientId);
-            Platform.runLater(() -> {
-                clientPassesArea.clear();
-                if (resp != null && resp.startsWith("PASSES_OK")) {
-                    String[] tokens = resp.split(";");
-                    if (tokens.length <= 1) {
-                        clientPassesArea.setText("Brak aktywnych karnetów");
-                    } else {
-                        for (int i = 1; i < tokens.length; i++) {
-                            clientPassesArea.appendText(tokens[i] + "\n");
-                        }
-                    }
-                }
-            });
-        }).start();
-    }
-
-    private void loadGroupClasses() {
-        new Thread(() -> {
-            String resp = networkClient.sendRequest("GET_GROUP_CLASSES");
-            Platform.runLater(() -> {
-                classesList.clear();
-                if (resp != null && resp.startsWith("CLASSES_OK")) {
-                    String[] tokens = resp.split(";");
-                    for (int i = 1; i < tokens.length; i++) {
-                        String[] parts = tokens[i].split(",");
-                        if (parts.length >= 6) {
-                            classesList.add(new GroupClassDisplay(
-                                    Integer.parseInt(parts[0]),
-                                    parts[1],
-                                    parts[2],
-                                    Integer.parseInt(parts[3]),
-                                    Integer.parseInt(parts[4]),
-                                    parts[5]
-                            ));
-                        }
-                    }
-                }
-            });
-        }).start();
-    }
-
-    private void searchClientForReservation() {
-        String searchTerm = resClientSearchField.getText().trim();
-        if (searchTerm.isEmpty()) {
-            showAlert("Błąd", "Podaj email lub PESEL klienta", Alert.AlertType.WARNING);
-            return;
-        }
-
-        new Thread(() -> {
-            String resp = networkClient.sendRequest("SEARCH_CLIENT;" + searchTerm);
-            Platform.runLater(() -> {
-                if (resp != null && resp.startsWith("CLIENT_FOUND")) {
-                    String[] tokens = resp.split(";");
-                    if (tokens.length >= 5) {
-                        resSelectedClientId = Integer.parseInt(tokens[1]);
-                        String name = tokens[2] + " " + tokens[3];
-                        String email = tokens[4];
-                        resClientInfoLabel.setText("✓ Klient: " + name + " (" + email + ")");
-                        loadClientReservations();
-                    }
-                } else {
-                    resSelectedClientId = -1;
-                    resClientInfoLabel.setText("✗ Nie znaleziono klienta");
-                    clientReservationsArea.clear();
-                }
-            });
-        }).start();
-    }
-
-    private void handleCreateReservation() {
-        if (resSelectedClientId == -1) {
-            showAlert("Błąd", "Wybierz klienta", Alert.AlertType.WARNING);
-            return;
-        }
-
-        GroupClassDisplay selected = classesTable.getSelectionModel().getSelectedItem();
-        if (selected == null) {
-            showAlert("Błąd", "Wybierz zajęcia z harmonogramu", Alert.AlertType.WARNING);
-            return;
-        }
-
-        new Thread(() -> {
-            String req = String.format("CREATE_RESERVATION;%d;%d", resSelectedClientId, selected.getId());
-            String resp = networkClient.sendRequest(req);
-
-            Platform.runLater(() -> {
-                if (resp != null && resp.startsWith("RESERVATION_OK")) {
-                    showAlert("Sukces", "Rezerwacja została utworzona!", Alert.AlertType.INFORMATION);
-                    loadGroupClasses();
-                    loadClientReservations();
-                } else {
-                    showAlert("Błąd", resp != null ? resp : "Nieznany błąd", Alert.AlertType.ERROR);
-                }
-            });
-        }).start();
-    }
-
-    private void handleCancelReservation() {
-        String resIdStr = cancelResIdField.getText().trim();
-        if (resIdStr.isEmpty()) {
-            showAlert("Błąd", "Podaj ID rezerwacji", Alert.AlertType.WARNING);
-            return;
-        }
-
-        try {
-            int resId = Integer.parseInt(resIdStr);
-
+    private Tab buildCheckInTab() {
+        Tab tab = new Tab("Weryfikacja & Rejestracja");
+        HBox mainLayout = new HBox(30); mainLayout.setPadding(new Insets(20));
+
+        VBox checkInBox = new VBox(15); checkInBox.setPrefWidth(350);
+        Label lbl1 = new Label("Weryfikacja wejścia (Check-in):"); lbl1.setStyle("-fx-font-weight: bold;");
+        TextField checkInField = new TextField(); checkInField.setPromptText("ID Klienta lub PESEL");
+        Button verifyBtn = new Button("Skanuj / Weryfikuj wejście");
+        verifyBtn.setStyle("-fx-background-color: #2b6cb0; -fx-text-fill: white; -fx-font-weight: bold; -fx-pref-width: 350px;");
+        
+        Label accessStatusLabel = new Label("Oczekiwanie na skan...");
+        accessStatusLabel.setPrefSize(350, 100); accessStatusLabel.setAlignment(Pos.CENTER);
+        accessStatusLabel.setStyle("-fx-background-color: #edf2f7; -fx-font-size: 16px; -fx-font-weight: bold; -fx-border-color: #cbd5e1; -fx-border-width: 2px;");
+
+        verifyBtn.setOnAction(e -> {
             new Thread(() -> {
-                String resp = networkClient.sendRequest("CANCEL_RESERVATION;" + resId);
-                Platform.runLater(() -> {
-                    if (resp != null && resp.startsWith("CANCEL_OK")) {
-                        showAlert("Sukces", "Rezerwacja została anulowana", Alert.AlertType.INFORMATION);
-                        cancelResIdField.clear();
-                        loadGroupClasses();
-                        if (resSelectedClientId != -1) {
-                            loadClientReservations();
+                String findResp = networkClient.sendRequest("SEARCH_CLIENT;" + checkInField.getText().trim());
+                if (findResp != null && findResp.startsWith("CLIENT_FOUND")) {
+                    String id = findResp.split(";")[1];
+                    String accessResp = networkClient.sendRequest("VERIFY_ENTRY;" + id);
+                    Platform.runLater(() -> {
+                        if (accessResp != null && accessResp.startsWith("VERIFY_GRANTED")) {
+                            accessStatusLabel.setText("Dostęp Przyznany!\nKarnet AKTYWNY");
+                            accessStatusLabel.setStyle("-fx-background-color: #c6f6d5; -fx-text-fill: #276749; -fx-font-size: 18px; -fx-font-weight: bold; -fx-border-color: #38a169; -fx-border-width: 3px;");
+                        } else {
+                            accessStatusLabel.setText("Odmowa Dostępu!\nBrak aktywnego karnetu");
+                            accessStatusLabel.setStyle("-fx-background-color: #fed7d7; -fx-text-fill: #c53030; -fx-font-size: 18px; -fx-font-weight: bold; -fx-border-color: #e53e3e; -fx-border-width: 3px;");
                         }
+                    });
+                } else {
+                    Platform.runLater(() -> {
+                        accessStatusLabel.setText("BŁĄD: Taki klient nie istnieje w bazie");
+                        accessStatusLabel.setStyle("-fx-background-color: #fed7d7; -fx-text-fill: #c53030; -fx-font-size: 16px; -fx-font-weight: bold;");
+                    });
+                }
+            }).start();
+        });
+        checkInBox.getChildren().addAll(lbl1, checkInField, verifyBtn, accessStatusLabel);
+
+        VBox regBox = new VBox(10); regBox.setPrefWidth(350);
+        Label lbl2 = new Label("Szybka Rejestracja Nowego Klienta:"); lbl2.setStyle("-fx-font-weight: bold;");
+        TextField rPesel = new TextField(); rPesel.setPromptText("PESEL (11 cyfr)");
+        TextField rName = new TextField(); rName.setPromptText("Imię");
+        TextField rLast = new TextField(); rLast.setPromptText("Nazwisko");
+        TextField rEmail = new TextField(); rEmail.setPromptText("Email");
+        PasswordField rPass = new PasswordField(); rPass.setPromptText("Tymczasowe Hasło");
+        Button regBtn = new Button("Zarejestruj Klienta");
+        regBtn.setStyle("-fx-background-color: #38a169; -fx-text-fill: white; -fx-font-weight: bold; -fx-pref-width: 350px;");
+
+        regBtn.setOnAction(e -> {
+            new Thread(() -> {
+                String req = String.format("REGISTER;%s;%s;%s;%s;%s;CLIENT", rPesel.getText(), rName.getText(), rLast.getText(), rEmail.getText(), rPass.getText());
+                String resp = networkClient.sendRequest(req);
+                Platform.runLater(() -> {
+                    showAlert("Rejestracja", resp);
+                    if(resp != null && resp.startsWith("REGISTER_OK")) { rPesel.clear(); rName.clear(); rLast.clear(); rEmail.clear(); rPass.clear(); }
+                });
+            }).start();
+        });
+        regBox.getChildren().addAll(lbl2, rPesel, rName, rLast, rEmail, rPass, regBtn);
+
+        mainLayout.getChildren().addAll(checkInBox, new Separator(javafx.geometry.Orientation.VERTICAL), regBox);
+        tab.setContent(mainLayout);
+        return tab;
+    }
+
+    private Tab buildSalesTab() {
+        Tab tab = new Tab("Sprzedaż Karnetów");
+        VBox content = new VBox(15); content.setPadding(new Insets(20));
+
+        searchClientField = new TextField(); searchClientField.setPromptText("Email lub PESEL klienta");
+        Button searchClientBtn = new Button("Znajdź w systemie");
+        clientInfoLabel = new Label("Brak wybranego klienta"); clientInfoLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #2b6cb0;");
+        
+        searchClientBtn.setOnAction(e -> {
+            new Thread(() -> {
+                String resp = networkClient.sendRequest("SEARCH_CLIENT;" + searchClientField.getText().trim());
+                Platform.runLater(() -> {
+                    if (resp != null && resp.startsWith("CLIENT_FOUND")) {
+                        String[] t = resp.split(";");
+                        selectedClientId = Integer.parseInt(t[1]);
+                        clientInfoLabel.setText("Aktywny profil: " + t[2] + " " + t[3] + " (" + t[4] + ")");
+                        refreshClientPasses();
                     } else {
-                        showAlert("Błąd", resp != null ? resp : "Nieznany błąd", Alert.AlertType.ERROR);
+                        selectedClientId = -1; 
+                        clientInfoLabel.setText("Nie znaleziono klienta.");
+                        clientPassesArea.clear();
                     }
                 });
             }).start();
-        } catch (NumberFormatException e) {
-            showAlert("Błąd", "ID musi być liczbą", Alert.AlertType.ERROR);
-        }
-    }
+        });
 
-    private void loadClientReservations() {
-        if (resSelectedClientId == -1) return;
+        HBox topBox = new HBox(15, new Label("Wyszukaj klienta:"), searchClientField, searchClientBtn, clientInfoLabel);
+
+        ComboBox<String> passTypeCombo = new ComboBox<>(); passTypeCombo.setPromptText("Wybierz karnet z bazy...");
+        passTypeCombo.setPrefWidth(250);
+        ComboBox<String> paymentMethodCombo = new ComboBox<>(); paymentMethodCombo.getItems().addAll("CASH", "CARD", "BLIK", "TRANSFER"); paymentMethodCombo.setValue("CARD");
+        Button sellBtn = new Button("Finalizuj Sprzedaż"); sellBtn.setStyle("-fx-background-color: #d69e2e; -fx-text-fill: white; -fx-font-weight: bold;");
 
         new Thread(() -> {
-            String resp = networkClient.sendRequest("GET_CLIENT_RESERVATIONS;" + resSelectedClientId);
+            String resp = networkClient.sendRequest("GET_PASS_TYPES");
             Platform.runLater(() -> {
-                clientReservationsArea.clear();
-                if (resp != null && resp.startsWith("RESERVATIONS_OK")) {
+                if (resp != null && resp.startsWith("PASS_TYPES_OK")) {
                     String[] tokens = resp.split(";");
-                    if (tokens.length <= 1) {
-                        clientReservationsArea.setText("Brak rezerwacji");
-                    } else {
-                        for (int i = 1; i < tokens.length; i++) {
-                            clientReservationsArea.appendText(tokens[i] + "\n");
+                    for (int i = 1; i < tokens.length; i++) {
+                        String[] p = tokens[i].split(",");
+                        if(p.length >= 3) {
+                            passTypeCombo.getItems().add(p[0] + " - " + p[1] + " (" + p[2] + " PLN)");
                         }
                     }
                 }
             });
         }).start();
+
+        sellBtn.setOnAction(e -> {
+            if (selectedClientId != -1 && passTypeCombo.getValue() != null) {
+                new Thread(() -> {
+                    String passId = passTypeCombo.getValue().split(" - ")[0]; // Pobiera bezpiecznie tylko ID
+                    String req = String.format("SELL_PASS;%d;%s;%s", selectedClientId, passId, paymentMethodCombo.getValue());
+                    String resp = networkClient.sendRequest(req);
+                    Platform.runLater(() -> { showAlert("Transakcja", resp); refreshClientPasses(); });
+                }).start();
+            } else { 
+                showAlert("Błąd", "Najpierw wyszukaj klienta i wybierz rodzaj karnetu z listy."); 
+            }
+        });
+
+        HBox sellBox = new HBox(15, passTypeCombo, paymentMethodCombo, sellBtn);
+
+        clientPassesArea = new TextArea(); clientPassesArea.setPrefHeight(150); clientPassesArea.setEditable(false);
+        content.getChildren().addAll(topBox, new Separator(), new Label("Nowy zakup:"), sellBox, new Separator(), new Label("Historia aktywnych karnetów wybranego klienta:"), clientPassesArea);
+        tab.setContent(content); return tab;
     }
 
-    private void showAlert(String title, String message, Alert.AlertType type) {
-        Alert alert = new Alert(type);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+    private Tab buildReservationsTab() {
+        Tab tab = new Tab("Zajęcia i Rezerwacje");
+        VBox content = new VBox(15); content.setPadding(new Insets(20));
+
+        TextArea scheduleArea = new TextArea(); scheduleArea.setPrefHeight(150); scheduleArea.setEditable(false);
+        Button loadScheduleBtn = new Button("Pobierz Aktualny Harmonogram Zajęć");
+        loadScheduleBtn.setOnAction(e -> {
+            new Thread(() -> {
+                String resp = networkClient.sendRequest("GET_GROUP_CLASSES");
+                Platform.runLater(() -> {
+                    scheduleArea.clear();
+                    if(resp != null && resp.startsWith("CLASSES_OK")) {
+                        String[] tokens = resp.split(";");
+                        if(tokens.length == 1) scheduleArea.setText("Brak zajęć.");
+                        for(int i = 1; i < tokens.length; i++) scheduleArea.appendText("Zajęcia: " + tokens[i] + "\n");
+                    } else {
+                        showAlert("Błąd", resp);
+                    }
+                });
+            }).start();
+        });
+
+        HBox actionBox = new HBox(15);
+        TextField classIdField = new TextField(); classIdField.setPromptText("ID Zajęć (do zapisu)");
+        Button enrollBtn = new Button("Zapisz wczytanego klienta");
+        enrollBtn.setOnAction(e -> {
+            if(selectedClientId != -1 && !classIdField.getText().isEmpty()) {
+                new Thread(() -> {
+                    String resp = networkClient.sendRequest("CREATE_RESERVATION;" + selectedClientId + ";" + classIdField.getText().trim());
+                    Platform.runLater(() -> showAlert("Rezerwacja", resp));
+                }).start();
+            } else { showAlert("Wymagane działanie", "Musisz wczytać profil klienta w zakładce Sprzedaż oraz podać poprawne ID zajęć z harmonogramu."); }
+        });
+
+        TextField cancelIdField = new TextField(); cancelIdField.setPromptText("ID Rezerwacji (do usunięcia)");
+        Button cancelBtn = new Button("Odwołaj rezerwację"); cancelBtn.setStyle("-fx-background-color: #e53e3e; -fx-text-fill: white; -fx-font-weight: bold;");
+        cancelBtn.setOnAction(e -> {
+            if(!cancelIdField.getText().isEmpty()) {
+                new Thread(() -> {
+                    String resp = networkClient.sendRequest("CANCEL_RESERVATION;" + cancelIdField.getText().trim());
+                    Platform.runLater(() -> showAlert("Anulowanie", resp));
+                }).start();
+            }
+        });
+
+        actionBox.getChildren().addAll(classIdField, enrollBtn, new Separator(javafx.geometry.Orientation.VERTICAL), cancelIdField, cancelBtn);
+        content.getChildren().addAll(loadScheduleBtn, scheduleArea, new Separator(), new Label("Zarządzanie miejscami:"), actionBox);
+        tab.setContent(content); return tab;
     }
 
-    public static class GroupClassDisplay {
-        private final int id;
-        private final String name;
-        private final String scheduleTime;
-        private final int capacity;
-        private final int bookedCount;
-        private final String status;
+    private Tab buildHelpdeskTab() {
+        Tab tab = new Tab("Helpdesk & Info");
+        HBox content = new HBox(30); content.setPadding(new Insets(20));
 
-        public GroupClassDisplay(int id, String name, String scheduleTime,
-                                 int capacity, int bookedCount, String status) {
-            this.id = id;
-            this.name = name;
-            this.scheduleTime = scheduleTime;
-            this.capacity = capacity;
-            this.bookedCount = bookedCount;
-            this.status = status;
+        VBox infoBox = new VBox(10); infoBox.setPrefWidth(350);
+        Label lbl1 = new Label("Baza wiedzy - Informacje o placówce:"); lbl1.setStyle("-fx-font-weight: bold;");
+        TextArea infoArea = new TextArea(); infoArea.setEditable(false); infoArea.setPrefHeight(150);
+        Button loadInfoBtn = new Button("Pobierz dane klubu");
+        loadInfoBtn.setOnAction(e -> {
+            new Thread(() -> {
+                String resp = networkClient.sendRequest("GET_CLUB_INFO");
+                Platform.runLater(() -> {
+                    if(resp != null && resp.startsWith("CLUB_INFO_OK")) {
+                        String[] t = resp.split(";");
+                        if(t.length >= 4) infoArea.setText("Nazwa: " + t[1] + "\nAdres: " + t[2] + "\nGodziny otwarcia: " + t[3]);
+                    } else {
+                        showAlert("Informacja", resp);
+                    }
+                });
+            }).start();
+        });
+        infoBox.getChildren().addAll(lbl1, loadInfoBtn, infoArea);
+
+        VBox complaintBox = new VBox(10); complaintBox.setPrefWidth(350);
+        Label lbl2 = new Label("Zgłoszenie problemu technicznego / Usterki:"); lbl2.setStyle("-fx-font-weight: bold;");
+        TextField cClientId = new TextField(); cClientId.setPromptText("ID Klienta (jeśli dotyczy)");
+        TextArea complaintArea = new TextArea(); complaintArea.setPromptText("Szczegóły usterki (np. zepsuta bieżnia nr 3, brak wody)..."); complaintArea.setPrefHeight(120);
+        Button sendCompBtn = new Button("Przekaż do Managera"); sendCompBtn.setStyle("-fx-background-color: #d69e2e; -fx-text-fill: white; -fx-font-weight: bold;");
+        sendCompBtn.setOnAction(e -> {
+            new Thread(() -> {
+                String id = cClientId.getText().isEmpty() ? "0" : cClientId.getText().trim();
+                String text = complaintArea.getText().replace(";", ","); // Zabezpieczenie przed zepsuciem komendy
+                if(text.isEmpty()) { Platform.runLater(()->showAlert("Błąd", "Wpisz treść zgłoszenia!")); return; }
+                
+                String resp = networkClient.sendRequest("LOG_COMPLAINT;" + id + ";" + text);
+                Platform.runLater(() -> { showAlert("Status zgłoszenia", resp); complaintArea.clear(); cClientId.clear(); });
+            }).start();
+        });
+        complaintBox.getChildren().addAll(lbl2, cClientId, complaintArea, sendCompBtn);
+
+        content.getChildren().addAll(infoBox, new Separator(javafx.geometry.Orientation.VERTICAL), complaintBox);
+        tab.setContent(content); return tab;
+    }
+
+    private void refreshClientPasses() {
+        if(selectedClientId != -1) {
+            new Thread(() -> {
+                String resp = networkClient.sendRequest("GET_CLIENT_PASSES;" + selectedClientId);
+                Platform.runLater(() -> {
+                    clientPassesArea.clear();
+                    if(resp != null && resp.startsWith("PASSES_OK")) {
+                        String[] tokens = resp.split(";");
+                        if (tokens.length == 1) clientPassesArea.setText("Klient nie posiada aktywnych karnetów.");
+                        for(int i = 1; i < tokens.length; i++) {
+                            clientPassesArea.appendText(tokens[i] + "\n");
+                        }
+                    } else {
+                        showAlert("Błąd systemu", resp);
+                    }
+                });
+            }).start();
         }
+    }
 
-        public int getId() { return id; }
-        public String getName() { return name; }
-        public String getScheduleTime() { return scheduleTime; }
-        public String getCapacityInfo() { return bookedCount + "/" + capacity; }
-        public String getStatus() { return status; }
+    private void showAlert(String title, String msg) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(title); 
+        alert.setHeaderText(null);
+        
+        if (msg != null && msg.contains(";")) {
+            String[] parts = msg.split(";", 2); // Dzieli string maksymalnie na 2 części, reszta zostaje nietknięta
+            alert.setContentText(parts.length > 1 ? parts[1] : parts[0]);
+        } else {
+            alert.setContentText(msg != null ? msg : "Wystąpił nieznany błąd podczas łączenia z serwerem.");
+        }
+        
+        alert.showAndWait();
     }
 }

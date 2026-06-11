@@ -26,11 +26,20 @@ public class FitnessServer {
     private static final GroupClassDAO groupClassDao = new GroupClassDaoJdbc();
     private static final ReservationDAO reservationDao = new ReservationDAOJdbc();
     private static final MessageDAO messageDao = new MessageDaoJdbc();
-
+    
+    // Obiekty dla Managera
+    private static final PromoCampaignDAO promoCampaignDao = new PromoCampaignDaoJdbc();
+    private static final DiscountDAO discountDao = new DiscountDaoJdbc();
+    private static final CampaignPassDAO campaignPassDao = new CampaignPassDaoJdbc();
+    
+    // Handlery poleceń
     private static final EquipmentCommandHandler equipmentHandler = new EquipmentCommandHandler(equipmentDao);
     private static final ClubCommandHandler clubHandler = new ClubCommandHandler(clubDao);
     private static final TrainerCommandHandler trainerHandler = new TrainerCommandHandler(exerciseDictDao, trainingPlanDao, planItemDao, userDao, messageDao);
-    private static final ReceptionistCommandHandler receptionistHandler = new ReceptionistCommandHandler(passTypeDao, gymPassDao, paymentDao, groupClassDao, reservationDao, userDao);
+    private static final ManagerCommandHandler managerHandler = new ManagerCommandHandler(promoCampaignDao, paymentDao, userDao, discountDao, campaignPassDao, passTypeDao);
+    private static final ReceptionistCommandHandler receptionistHandler = new ReceptionistCommandHandler(
+            passTypeDao, gymPassDao, paymentDao, groupClassDao, reservationDao, userDao, clubDao, messageDao
+    );
     public static void main(String[] args) {
         //DatabaseInitializer.init();
         System.out.println("Baza danych zainicjalizowana.");
@@ -66,8 +75,10 @@ public class FitnessServer {
                     } else {
                         out.println("LOGIN_ERROR;Nieprawidlowy email lub haslo");
                     }
+                    continue; // Zatrzymaj sprawdzanie reszty i wróć na początek
                 }
-                else if ("REGISTER".equals(command)) {
+                
+                if ("REGISTER".equals(command)) {
                     try {
                         GymUser user = new GymUser(0, tokens[1], tokens[2], tokens[3], tokens[4], tokens[5], tokens[6], "ACTIVE");
                         userDao.save(user);
@@ -75,31 +86,32 @@ public class FitnessServer {
                     } catch (Exception e) {
                         out.println("REGISTER_ERROR;Błąd tworzenia konta: " + e.getMessage());
                     }
+                    continue; // Zatrzymaj sprawdzanie reszty
                 }
-                else if (equipmentHandler.handle(command, tokens, out)) {
-                    // handled by equipment handler
-                }
-                else if (clubHandler.handle(command, tokens, out)) {
-                }
-                else if (trainerHandler.handle(command, tokens, out)) {
-                }
-                else if(receptionistHandler.handle(command, tokens, out)){
+                
+                // Przekazanie do odpowiednich handlerów
+                if (equipmentHandler.handle(command, tokens, out)) continue;
+                if (clubHandler.handle(command, tokens, out)) continue;
+                if (trainerHandler.handle(command, tokens, out)) continue;
+                if (receptionistHandler.handle(command, tokens, out)) continue;
+                
+                // Nasz nowy handler Managera
+                if (managerHandler.handle(command, tokens, out)) continue;
 
-                }
-
-                else if ("GET_EXERCISES".equals(command)) {
+                if ("GET_EXERCISES".equals(command)) {
                     List<ExerciseDict> list = exerciseDictDao.findAll();
                     StringBuilder sb = new StringBuilder("EXERCISES_OK");
                     for (ExerciseDict e : list) {
-                        // Format: EXERCISES_OK;id,nazwa,grupaMięśniowa,opis
                         sb.append(";").append(e.getId()).append(",")
                                 .append(e.getName()).append(",")
                                 .append(e.getMuscleGroup() != null ? e.getMuscleGroup() : "").append(",")
                                 .append(e.getDescription() != null ? e.getDescription() : "");
                     }
                     out.println(sb.toString());
+                    continue;
                 }
-                else if ("GET_PLANS".equals(command)) {
+                
+                if ("GET_PLANS".equals(command)) {
                     int userId = Integer.parseInt(tokens[1]);
                     List<TrainingPlan> list = trainingPlanDao.findByUserId(userId);
                     StringBuilder sb = new StringBuilder("PLANS_OK");
@@ -107,10 +119,11 @@ public class FitnessServer {
                         sb.append(";").append(p.getId()).append(",").append(p.getGoal());
                     }
                     out.println(sb.toString());
+                    continue;
                 }
-                else {
-                    out.println("UNKNOWN_COMMAND;Serwer nie rozpoznaje polecenia");
-                }
+                
+                // Jeśli kod dotarł tutaj, to znaczy że ŻADEN z powyższych warunków nie zadziałał
+                out.println("UNKNOWN_COMMAND;Serwer nie rozpoznaje polecenia");
             }
         } catch (IOException e) {
             System.out.println("Połączenie z klientem przerwane.");
