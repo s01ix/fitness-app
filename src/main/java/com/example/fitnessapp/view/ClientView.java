@@ -387,11 +387,23 @@ public class ClientView extends VBox {
                     .map(PassType::getName)
                     .orElse("Karnet");
 
-            String passInfo = String.format("%s\nWażny do: %s   |   Cena: %s PLN",
-                    passName,
-                    pass.getExpirationDate().toString(),
-                    pass.getPrice().toString()
-            );
+            long daysLeft = pass.getDaysRemaining(java.time.LocalDate.now());
+
+            String passInfo;
+            String style;
+
+            if (daysLeft > 7) {
+                passInfo = String.format("%s\nPozostało: %d dni (ważny do: %s)\nCena: %s PLN",
+                        passName, daysLeft, pass.getExpirationDate(), pass.getPrice());
+                style = "-fx-background-color: #f0fff4; -fx-text-fill: #276749; -fx-border-color: #c6f6d5;";
+            } else if (daysLeft > 0) {
+                passInfo = String.format("⚠️ UWAGA: Karnet wygasa za %d dni!\n%s\n(ważny do: %s)",
+                        daysLeft, passName, pass.getExpirationDate());
+                style = "-fx-background-color: #fffff0; -fx-text-fill: #b7791f; -fx-border-color: #f6e05e;";
+            } else {
+                passInfo = String.format("❌ Karnet wygasł!\n%s", passName);
+                style = "-fx-background-color: #fff5f5; -fx-text-fill: #c53030; -fx-border-color: #feb2b2;";
+            }
 
             Label passLabel = new Label(passInfo);
 
@@ -399,10 +411,9 @@ public class ClientView extends VBox {
             passLabel.setWrapText(true);
             passLabel.setAlignment(Pos.CENTER);
 
-            passLabel.setStyle("-fx-background-color: #f0fff4; -fx-text-fill: #276749; -fx-padding: 12px; " +
-                    "-fx-background-radius: 8px; -fx-border-color: #c6f6d5; -fx-border-width: 1px; " +
-                    "-fx-border-radius: 8px; -fx-font-size: 13px; -fx-font-weight: bold; " +
-                    "-fx-text-alignment: center; -fx-cursor: hand;");
+            passLabel.setStyle(style + " -fx-padding: 12px; -fx-background-radius: 8px; " +
+                    "-fx-border-width: 1px; -fx-border-radius: 8px; -fx-font-size: 13px; " +
+                    "-fx-font-weight: bold; -fx-text-alignment: center; -fx-cursor: hand;");
 
             passLabel.setOnMouseClicked(e -> showPassDetails(pass, passName));
 

@@ -56,4 +56,23 @@ public class GymUser {
     public String getStatus() {return status.get();}
     public StringProperty statusProperty() {return status;}
     public void setStatus(String status) {this.status.set(status);}
+
+    //Sprawdzenie poprawności hasła
+    public boolean checkPassword(String inputPassword) {
+        if (inputPassword == null || this.getPasswordHash() == null) {
+            return false;
+        }
+        return this.getPasswordHash().equals(inputPassword);
+    }
+    //Sprawdzenie formatu emaila
+    public boolean isValidEmail(String emailToCheck) {
+        if (emailToCheck == null) return false;
+        return emailToCheck.contains("@") && emailToCheck.contains(".");
+    }
+    //Sprawdzenie długości peselu
+    public boolean isValidPesel(String peselToCheck) {
+        if (peselToCheck == null) return false;
+        return peselToCheck.length() == 11 && peselToCheck.matches("\\d+");
+    }
+
 }
