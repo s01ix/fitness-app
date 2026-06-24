@@ -16,6 +16,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.util.StringConverter;
+import javafx.scene.control.TextArea;
 
 import java.util.List;
 
@@ -30,6 +31,7 @@ public class ClientView extends VBox {
     private final ReservationDAOJdbc reservationDAOJdbc = new ReservationDAOJdbc();
     private final GymUserDaoJdbc gymUserDaoJdbc = new GymUserDaoJdbc();
     private final MessageDaoJdbc messageDaoJdbc = new MessageDaoJdbc();
+    private final ComplaintDaoJdbc complaintDaoJdbc = new ComplaintDaoJdbc();
     private final int currentUserId;
 
     private final VBox activePassesContainer = new VBox(12);
@@ -305,6 +307,65 @@ public class ClientView extends VBox {
 
         refreshAttendanceHistory();
 
+        // REKLAMACJE I ZGŁOSZENIA
+
+        VBox complaintCard = new VBox(15);
+        complaintCard.setAlignment(Pos.CENTER);
+        complaintCard.setMaxWidth(450);
+
+        complaintCard.setStyle(
+                "-fx-background-color: #ffffff; " +
+                        "-fx-padding: 25px; " +
+                        "-fx-background-radius: 10px; " +
+                        "-fx-border-color: #e2e8f0; " +
+                        "-fx-border-width: 1px; " +
+                        "-fx-border-radius: 10px;"
+        );
+
+        Label complaintTitle = new Label("Zgłoś problem lub reklamację");
+        complaintTitle.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+
+        TextArea complaintArea = new TextArea();
+        complaintArea.setPromptText("Opisz problem...");
+        complaintArea.setPrefRowCount(4);
+        complaintArea.setPrefWidth(380);
+
+        Button complaintButton = new Button("Wyślij zgłoszenie");
+        complaintButton.setPrefWidth(380);
+
+        Label complaintInfo = new Label();
+
+        complaintButton.setOnAction(e -> {
+            try {
+                if (complaintArea.getText().isBlank()) {
+                    complaintInfo.setText("Wpisz treść zgłoszenia.");
+                    return;
+                }
+
+                Complaint complaint = new Complaint();
+
+                complaint.setAuthorId(currentUserId);
+                complaint.setDescription(complaintArea.getText());
+                complaint.setStatus("OPEN");
+
+                complaintDaoJdbc.save(complaint);
+
+                complaintInfo.setText("Zgłoszenie zostało zapisane.");
+                complaintArea.clear();
+
+            } catch (Exception ex) {
+                complaintInfo.setText("Błąd: " + ex.getMessage());
+                ex.printStackTrace();
+            }
+        });
+
+        complaintCard.getChildren().addAll(
+                complaintTitle,
+                complaintArea,
+                complaintButton,
+                complaintInfo
+        );
+
         //SKRZYNKA ODBIORCZA OD TRENERA
         Label inboxTitle = new Label("Skrzynka odbiorcza - Wiadomości od trenera");
         inboxTitle.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2c3e50; -fx-padding: 15 0 0 0;");
@@ -326,6 +387,7 @@ public class ClientView extends VBox {
                 trainingPlanTitle,
                 trainingPlanContainer,
                 inboxTitle,
+                complaintCard,
                 inboxContainer
         );
 

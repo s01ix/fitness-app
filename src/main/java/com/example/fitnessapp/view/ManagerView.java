@@ -14,7 +14,8 @@ public class ManagerView extends VBox {
     private final NetworkClient networkClient;
     private final int currentUserId;
 
-    private TextArea campaignsDisplay, discountDisplay, cPassDisplay;
+    private TextArea campaignsDisplay, discountDisplay, cPassDisplay, complaintsDisplay;
+
     private Label totalRevenueLabel, totalUsersLabel, totalTransactionsLabel;
 
     public ManagerView(NetworkClient networkClient, int currentUserId) {
@@ -34,8 +35,9 @@ public class ManagerView extends VBox {
         Tab statsTab = new Tab("Raporty i Finanse", buildStatsModule());
         Tab campaignsTab = new Tab("Kampanie Promocyjne", buildCampaignsModule());
         Tab discountsTab = new Tab("Zniżki i Promowane Karnety", buildDiscountsModule());
+        Tab complaintsTab = new Tab("Reklamacje", buildComplaintsModule());
 
-        tabPane.getTabs().addAll(statsTab, campaignsTab, discountsTab);
+        tabPane.getTabs().addAll(statsTab, campaignsTab, discountsTab,complaintsTab);
         this.getChildren().add(tabPane);
 
         refreshStats(); refreshCampaigns(); refreshDiscounts(); refreshCPasses();
@@ -231,6 +233,85 @@ public class ManagerView extends VBox {
                 }
             });
         }).start();
+    }
+    private VBox buildComplaintsModule() {
+
+        VBox box = new VBox(10);
+        box.setPadding(new Insets(20));
+
+        complaintsDisplay = new TextArea();
+        complaintsDisplay.setEditable(false);
+        complaintsDisplay.setPrefHeight(400);
+
+        Button refresh = new Button("Odśwież");
+
+        TextField complaintIdField = new TextField();
+        complaintIdField.setPromptText("ID reklamacji");
+
+        ComboBox<String> statusBox = new ComboBox<>();
+        statusBox.getItems().addAll(
+                "OPEN",
+                "IN_PROGRESS",
+                "RESOLVED",
+                "REJECTED"
+        );
+        statusBox.setValue("OPEN");
+
+        Button updateButton = new Button("Aktualizuj status");
+
+        refresh.setOnAction(e -> {
+
+            new Thread(() -> {
+
+                String resp = networkClient.sendRequest("GET_COMPLAINTS");
+
+                Platform.runLater(() -> {
+
+                    complaintsDisplay.clear();
+
+                    if(resp != null && resp.startsWith("COMPLAINTS_OK")){
+
+                        String[] tokens = resp.split(";");
+
+                        for(int i=1;i<tokens.length;i++){
+
+                            complaintsDisplay.appendText(tokens[i] + "\n");
+
+                        }
+
+                    }
+
+                });
+
+            }).start();
+
+        });
+
+        updateButton.setOnAction(e -> {
+
+            if (complaintIdField.getText().isBlank())
+                return;
+
+            String request = "UPDATE_COMPLAINT_STATUS;"
+                    + complaintIdField.getText() + ";"
+                    + statusBox.getValue();
+
+            String response = networkClient.sendRequest(request);
+
+            showAlert("Aktualizacja", response);
+
+            refresh.fire();
+        });
+
+        box.getChildren().addAll(
+                complaintsDisplay,
+                complaintIdField,
+                statusBox,
+                updateButton,
+                refresh
+        );
+
+        return box;
     }
 
     private void showAlert(String title, String msg) {

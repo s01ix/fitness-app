@@ -14,6 +14,16 @@ public class AdminView extends VBox {
     private TextField clubName, clubAddress, clubHours;
     private Button getEqBtn, addEqBtn;
     private TextArea eqDisplay;
+    private Button getUsersBtn;
+    private Button changeRoleBtn;
+
+    private TextArea usersDisplay;
+
+    private TextField userIdField;
+
+    private ComboBox<String> roleBox;
+    private ComboBox<String> statusBox;
+    private Button changeStatusBtn;
     private TextField eqClubId, eqName;
     private ComboBox<String> eqStatus;
     private DatePicker eqDate;
@@ -24,11 +34,13 @@ public class AdminView extends VBox {
 
         VBox clubBox = buildClubModule();
         VBox dataBox = buildEquipmentModule();
+        VBox usersBox = buildUsersModule();
 
         setupClubActions();
         setupEquipmentActions();
+        setupUserActions();
 
-        this.getChildren().addAll(clubBox, dataBox);
+        this.getChildren().addAll(clubBox, dataBox, usersBox);
     }
 
     private VBox buildClubModule() {
@@ -71,6 +83,66 @@ public class AdminView extends VBox {
                 new Label("Dodaj nowy sprzęt:"), eqClubId, eqName, eqStatus, eqDate, addEqBtn
         );
         return dataBox;
+    }
+
+    private VBox buildUsersModule() {
+
+        VBox box = new VBox(5);
+        box.setStyle("-fx-border-color: green; -fx-padding: 10;");
+
+        getUsersBtn = new Button("Pokaż użytkowników");
+
+        usersDisplay = new TextArea();
+        usersDisplay.setPrefHeight(150);
+
+        userIdField = new TextField();
+        userIdField.setPromptText("ID użytkownika");
+
+        roleBox = new ComboBox<>();
+        roleBox.getItems().addAll(
+                "CLIENT",
+                "TRAINER",
+                "RECEPTIONIST",
+                "MANAGER",
+                "ADMIN"
+        );
+
+        roleBox.setValue("CLIENT");
+
+        changeRoleBtn = new Button("Zmień rolę");
+        statusBox = new ComboBox<>();
+        statusBox.getItems().addAll(
+                "ACTIVE",
+                "INACTIVE"
+        );
+
+        statusBox.setValue("ACTIVE");
+
+        changeStatusBtn = new Button("Zmień status");
+
+        box.getChildren().addAll(
+
+                new Label("Zarządzanie użytkownikami"),
+
+                getUsersBtn,
+
+                usersDisplay,
+
+                new Label("ID użytkownika"),
+                userIdField,
+
+                new Label("Nowa rola"),
+                roleBox,
+
+                changeRoleBtn,
+
+                new Label("Nowy status"),
+                statusBox,
+
+                changeStatusBtn
+        );
+
+        return box;
     }
 
     private void setupClubActions() {
@@ -159,5 +231,92 @@ public class AdminView extends VBox {
                 Platform.runLater(() -> { getEqBtn.fire();});
             }).start();
         });
+    }
+    private void setupUserActions() {
+
+        getUsersBtn.setOnAction(e -> {
+
+            usersDisplay.setText("Pobieranie użytkowników...");
+
+            new Thread(() -> {
+
+                String resp = networkClient.sendRequest("GET_USERS");
+
+                Platform.runLater(() -> {
+
+                    usersDisplay.clear();
+
+                    if (resp != null && resp.startsWith("USERS_OK")) {
+
+                        String[] tokens = resp.split(";");
+
+                        for (int i = 1; i < tokens.length; i++) {
+                            usersDisplay.appendText(tokens[i] + "\n");
+                        }
+
+                    } else {
+
+                        usersDisplay.setText(resp);
+
+                    }
+
+                });
+
+            }).start();
+
+        });
+        changeRoleBtn.setOnAction(e -> {
+
+            String id = userIdField.getText();
+
+            String role = roleBox.getValue();
+
+            new Thread(() -> {
+
+                String response = networkClient.sendRequest(
+                        "CHANGE_ROLE;" + id + ";" + role
+                );
+
+                Platform.runLater(() -> {
+
+                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                    alert.setContentText(response);
+                    alert.showAndWait();
+
+                    getUsersBtn.fire();
+
+                });
+
+            }).start();
+
+        });
+        changeStatusBtn.setOnAction(e -> {
+
+            String id = userIdField.getText();
+
+            String status = statusBox.getValue();
+
+            new Thread(() -> {
+
+                String response = networkClient.sendRequest(
+                        "CHANGE_STATUS;" + id + ";" + status
+                );
+
+                Platform.runLater(() -> {
+
+                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+
+                    alert.setContentText(response);
+
+                    alert.showAndWait();
+
+                    getUsersBtn.fire();
+
+                });
+
+            }).start();
+
+        });
+
     }
 }

@@ -10,6 +10,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
+
 public class FitnessApp extends Application {
     private NetworkClient networkClient;
     private int currentUserId = -1;
@@ -108,10 +109,15 @@ public class FitnessApp extends Application {
             currentUserId = -1;
             showLoginScreen();
         });
-        roleView.getChildren().add(logoutBtn);
-        roleView.setAlignment(Pos.CENTER);
 
-        primaryStage.setScene(new Scene(roleView, 800, 600));
+        roleView.getChildren().add(logoutBtn);
+        roleView.setAlignment(Pos.TOP_CENTER);
+
+        ScrollPane scrollPane = new ScrollPane(roleView);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setFitToHeight(true);
+
+        primaryStage.setScene(new Scene(scrollPane, 800, 600));
     }
 
     @Override

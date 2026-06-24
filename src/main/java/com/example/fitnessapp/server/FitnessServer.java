@@ -26,6 +26,8 @@ public class FitnessServer {
     private static final GroupClassDAO groupClassDao = new GroupClassDaoJdbc();
     private static final ReservationDAO reservationDao = new ReservationDAOJdbc();
     private static final MessageDAO messageDao = new MessageDaoJdbc();
+    private static final ComplaintDAO complaintDao = new ComplaintDaoJdbc();
+
     
     // Obiekty dla Managera
     private static final PromoCampaignDAO promoCampaignDao = new PromoCampaignDaoJdbc();
@@ -88,6 +90,8 @@ public class FitnessServer {
                     }
                     continue; // Zatrzymaj sprawdzanie reszty
                 }
+
+
                 
                 // Przekazanie do odpowiednich handlerów
                 if (equipmentHandler.handle(command, tokens, out)) continue;
@@ -97,6 +101,156 @@ public class FitnessServer {
                 
                 // Nasz nowy handler Managera
                 if (managerHandler.handle(command, tokens, out)) continue;
+
+                if ("GET_COMPLAINTS".equals(command)) {
+                    List<Complaint> list = complaintDao.findAll();
+
+                    StringBuilder sb = new StringBuilder("COMPLAINTS_OK");
+
+                    for (Complaint c : list) {
+                        sb.append(";")
+                                .append(c.getId())
+                                .append(" | Autor: ")
+                                .append(c.getAuthorId())
+                                .append(" | ")
+                                .append(c.getDescription())
+                                .append(" | ")
+                                .append(c.getStatus());
+                    }
+
+                    out.println(sb.toString());
+                    continue;
+                }
+
+                if ("UPDATE_COMPLAINT_STATUS".equals(command)) {
+
+                    try {
+
+                        int complaintId = Integer.parseInt(tokens[1]);
+                        String newStatus = tokens[2];
+
+                        Optional<Complaint> complaint = complaintDao.findById(complaintId);
+
+                        if (complaint.isPresent()) {
+
+                            Complaint c = complaint.get();
+
+                            c.setStatus(newStatus);
+
+                            complaintDao.update(c);
+
+                            out.println("UPDATE_OK;Status został zmieniony");
+
+                        } else {
+
+                            out.println("UPDATE_ERROR;Nie znaleziono reklamacji");
+
+                        }
+
+                    } catch (Exception e) {
+
+                        out.println("UPDATE_ERROR;" + e.getMessage());
+
+                    }
+
+                    continue;
+                }
+
+                if ("GET_USERS".equals(command)) {
+
+                    List<GymUser> list = userDao.findAll();
+
+                    StringBuilder sb = new StringBuilder("USERS_OK");
+
+                    for (GymUser u : list) {
+
+                        sb.append(";")
+                                .append("ID: ").append(u.getId())
+                                .append(" | ")
+                                .append(u.getFirstName()).append(" ")
+                                .append(u.getLastName())
+                                .append(" | ")
+                                .append(u.getEmail())
+                                .append(" | ")
+                                .append(u.getRole())
+                                .append(" | ")
+                                .append(u.getStatus());
+
+                    }
+
+                    out.println(sb.toString());
+
+                    continue;
+                }
+                if ("CHANGE_ROLE".equals(command)) {
+
+                    try {
+
+                        int id = Integer.parseInt(tokens[1]);
+
+                        String newRole = tokens[2];
+
+                        Optional<GymUser> user = userDao.findById(id);
+
+                        if (user.isPresent()) {
+
+                            GymUser u = user.get();
+
+                            u.setRole(newRole);
+
+                            userDao.update(u);
+
+                            out.println("Rola została zmieniona.");
+
+                        } else {
+
+                            out.println("Nie znaleziono użytkownika.");
+
+                        }
+
+                    } catch (Exception e) {
+
+                        out.println("Błąd: " + e.getMessage());
+
+                    }
+
+                    continue;
+                }
+
+                if ("CHANGE_STATUS".equals(command)) {
+
+                    try {
+
+                        int id = Integer.parseInt(tokens[1]);
+
+                        String newStatus = tokens[2];
+
+                        Optional<GymUser> user = userDao.findById(id);
+
+                        if (user.isPresent()) {
+
+                            GymUser u = user.get();
+
+                            u.setStatus(newStatus);
+
+                            userDao.update(u);
+
+                            out.println("Status został zmieniony.");
+
+                        } else {
+
+                            out.println("Nie znaleziono użytkownika.");
+
+                        }
+
+                    } catch (Exception e) {
+
+                        out.println("Błąd: " + e.getMessage());
+
+                    }
+
+                    continue;
+                }
 
                 if ("GET_EXERCISES".equals(command)) {
                     List<ExerciseDict> list = exerciseDictDao.findAll();
