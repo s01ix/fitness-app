@@ -89,7 +89,7 @@ public class GymUserDaoJdbc implements GymUserDAO {
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, new String[]{"ID"})) {
 
-            ps.setString(1, user.peselProperty().get());
+            ps.setString(1, user.getPesel());
             ps.setString(2, user.getFirstName());
             ps.setString(3, user.getLastName());
             ps.setString(4, user.getEmail());

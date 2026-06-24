@@ -103,4 +103,14 @@ public class Reservation {
     public void setStatus(String status) {
         this.status.set(status);
     }
+
+    //Sprawdzenie czy klient ma prawo anulować rezerwacje
+    public boolean canBeCanceled(java.time.LocalDate currentDate) {
+
+        if (!"CONFIRMED".equals(this.getStatus())) {
+            return false;
+        }
+
+        return this.getReservationDate() != null && this.getReservationDate().isAfter(currentDate);
+    }
 }

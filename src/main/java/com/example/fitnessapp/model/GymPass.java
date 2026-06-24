@@ -8,6 +8,7 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 
 public class GymPass {
     private final IntegerProperty id = new SimpleIntegerProperty();
@@ -122,5 +123,21 @@ public class GymPass {
 
     public void setStatus(String status) {
         this.status.set(status);
+    }
+
+    //Sprawdzanie czy karnet jest aktywny
+    public boolean isPassActiveOn(LocalDate date) {
+        if (!"ACTIVE".equals(this.getStatus())) {
+            return false;
+        }
+        return !date.isBefore(this.getPurchaseDate()) && !date.isAfter(this.getExpirationDate());
+    }
+
+    //Liczenie dni do końca karnetu
+    public long getDaysRemaining(LocalDate currentDate) {
+        if (this.getExpirationDate() == null || currentDate.isAfter(this.getExpirationDate())) {
+            return 0;
+        }
+        return ChronoUnit.DAYS.between(currentDate, this.getExpirationDate());
     }
 }
